@@ -1,5 +1,6 @@
 package com.smartcampus.api.security;
 
+import com.smartcampus.api.model.AuthProvider;
 import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.repository.UserRepository;
@@ -33,10 +34,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // Find or create user
         User user = userRepository.findByEmail(email)
                 .map(existingUser -> {
-                    // Update existing user
+                    // Update existing user / link account
                     existingUser.setName(name);
                     existingUser.setPicture(picture);
                     existingUser.setGoogleId(googleId);
+                    existingUser.setEmailVerified(true);
+                    
+                    if (existingUser.getAuthProvider() == AuthProvider.LOCAL) {
+                        existingUser.setAuthProvider(AuthProvider.BOTH);
+                    } else if (existingUser.getAuthProvider() == null) {
+                        existingUser.setAuthProvider(AuthProvider.GOOGLE);
+                    }
+                    
                     return userRepository.save(existingUser);
                 })
                 .orElseGet(() -> {
@@ -47,6 +56,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     newUser.setPicture(picture);
                     newUser.setGoogleId(googleId);
                     newUser.setRole(Role.STUDENT);
+                    newUser.setAuthProvider(AuthProvider.GOOGLE);
+                    newUser.setEmailVerified(true);
                     return userRepository.save(newUser);
                 });
         

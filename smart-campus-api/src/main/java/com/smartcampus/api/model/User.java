@@ -29,6 +29,15 @@ public class User {
     
     private String googleId;
     
+    private String password;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'LOCAL'")
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+    
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isEmailVerified = false;
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.STUDENT;

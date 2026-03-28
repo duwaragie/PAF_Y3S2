@@ -29,18 +29,12 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshToken createRefreshToken(Long userId) {
-        RefreshToken refreshToken = new RefreshToken();
+        com.smartcampus.api.model.User user = userRepository.findById(userId).get();
+        RefreshToken refreshToken = refreshTokenRepository.findByUser(user).orElse(new RefreshToken());
 
-        refreshToken.setUser(userRepository.findById(userId).get());
+        refreshToken.setUser(user);
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
         refreshToken.setToken(UUID.randomUUID().toString());
-
-        // We can first delete existing tokens for this user if we want only 1 session, 
-        // or just add multiple tokens if we want multiple sessions.
-        // For simplicity, let's delete existing ones if you want to maintain a 1-session logic.
-        refreshTokenRepository.deleteByUser(refreshToken.getUser());
-        
-        refreshToken = refreshTokenRepository.save(refreshToken);
         return refreshToken;
     }
 

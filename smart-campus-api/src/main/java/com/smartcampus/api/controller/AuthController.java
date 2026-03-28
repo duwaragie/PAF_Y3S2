@@ -6,6 +6,11 @@ import com.smartcampus.api.exception.TokenRefreshException;
 import com.smartcampus.api.model.RefreshToken;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.dto.UserDTO;
+import com.smartcampus.api.dto.LoginRequest;
+import com.smartcampus.api.dto.RegisterRequest;
+import com.smartcampus.api.dto.VerifyOtpRequest;
+import com.smartcampus.api.service.AuthService;
+import jakarta.validation.Valid;
 import com.smartcampus.api.security.JwtService;
 import com.smartcampus.api.security.RefreshTokenService;
 import com.smartcampus.api.service.UserService;
@@ -29,13 +34,45 @@ public class AuthController {
     private final UserService userService;
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
+    private final AuthService authService;
     
-    @GetMapping("/login")
-    public ResponseEntity<Map<String, String>> login() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Please use /oauth2/authorization/google to login");
-        response.put("loginUrl", "/oauth2/authorization/google");
-        return ResponseEntity.ok(response);
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        try {
+            return ResponseEntity.ok(authService.login(request));
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(401).body(response);
+        }
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+        try {
+            authService.register(request);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Registration successful. Please check your email for the OTP.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyOtpRequest request) {
+        try {
+            authService.verifyEmail(request.getEmail(), request.getOtp());
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Email verified successfully. You can now login.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
     
     @GetMapping("/status")
