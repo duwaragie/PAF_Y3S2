@@ -20,15 +20,14 @@ export function Logo({ variant = 'dark', size = 'md' }: LogoProps) {
     <div className="flex items-center gap-3">
       <div className={`${sizes[size].icon} ${iconBg} border rounded-xl flex items-center justify-center`}>
         <svg viewBox="0 0 24 24" fill="none" className={`w-5 h-5 ${iconColor}`} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
+          <path d="M2 10l10-5 10 5-10 5-10-5z" />
+          <path d="M6 12v5c0 1 3 3 6 3s6-2 6-3v-5" />
+          <path d="M22 10v6" />
         </svg>
       </div>
       <div className="flex flex-col">
         <span className={`${sizes[size].text} font-extrabold tracking-tight leading-tight ${textColor}`}>
-          SMART CAMPUS
+          ACADEMIC CURATOR
         </span>
         <span className={`${sizes[size].sub} font-semibold tracking-[0.2em] uppercase ${subColor}`}>
           Institutional Ecosystem

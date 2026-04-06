@@ -72,7 +72,6 @@ export default function VerifyOtpPage() {
       description=""
       heading="Securing your academic journey."
       subheading="Our multi-factor authentication ensures that your research, records, and institutional data remain protected under the highest security standards."
-      image="/University library interior.png"
     >
       <div className="space-y-6">
         {/* Mail icon */}

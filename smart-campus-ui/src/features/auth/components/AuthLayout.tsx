@@ -5,7 +5,7 @@ interface AuthLayoutProps {
   children: ReactNode;
   title: string;
   description: string;
-  heading: string;
+  heading: ReactNode;
   subheading: string;
   image?: string;
   pills?: string[];
@@ -28,11 +28,11 @@ export function AuthLayout({
       <div className="hidden lg:flex lg:w-1/2 bg-[#0c1f3a] relative overflow-hidden flex-col">
         {/* Geometric pattern background */}
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
+          className="absolute inset-0 bg-cover bg-center opacity-40"
           style={{ backgroundImage: "url('/geometric-bg.png')" }}
         />
-        {/* Gradient overlay — dark at top, slightly transparent at bottom for depth */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1f3a] via-[#0f2847]/90 to-[#132d4f]/80" />
+        {/* Gradient overlay — subtle so geometric pattern shows through */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1f3a]/60 via-[#0f2847]/40 to-[#132d4f]/30" />
 
         <div className="relative z-10 flex flex-col justify-between h-full p-10 xl:p-12">
           {/* Logo */}
@@ -63,11 +63,11 @@ export function AuthLayout({
 
             {/* Image */}
             {image && (
-              <div className="mt-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+              <div className="mt-4 overflow-hidden">
                 <img
                   src={image}
                   alt=""
-                  className="w-full h-48 xl:h-56 object-cover"
+                  className="w-full h-64 xl:h-72 object-contain"
                 />
               </div>
             )}

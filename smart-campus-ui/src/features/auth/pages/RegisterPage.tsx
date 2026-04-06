@@ -46,9 +46,8 @@ export default function RegisterPage() {
     <AuthLayout
       title="Create an account"
       description="Join the institutional network today."
-      heading="Your portal to institutional excellence."
+      heading={<>Your portal to<br />institutional excellence.</>}
       subheading="Join a community of scholars, researchers, and administrators managing the future of higher education with editorial precision."
-      image="/Academic Building.png"
       bottomText="Joined by 2,000+ faculty members this month"
     >
       <div className="space-y-6">
@@ -168,17 +167,6 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* Bottom meta */}
-        <div className="flex items-center justify-between text-[10px] text-gray-300 tracking-wider uppercase pt-4">
-          <span>Est. 2024</span>
-          <span className="flex items-center gap-1">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            Encrypted Access
-          </span>
-          <span>V1.0.0</span>
-        </div>
       </div>
     </AuthLayout>
   );

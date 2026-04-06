@@ -54,6 +54,6 @@ app:
     expiration-ms: 900000  # 15 minutes
     refresh-expiration-ms: 604800000 # 7 days
   oauth2:
-    redirect-uri: http://localhost:5173/auth/callback
+    redirect-uri: http://localhost:5173/oauth2/redirect
   frontend:
     url: http://localhost:5173
