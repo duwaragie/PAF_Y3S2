@@ -3,22 +3,27 @@ package com.smartcampus.api.service;
 import com.smartcampus.api.dto.ResourceDTO;
 import com.smartcampus.api.exception.ResourceNotFoundException;
 import com.smartcampus.api.model.Resource;
+import com.smartcampus.api.model.ResourceStatus;
+import com.smartcampus.api.model.ResourceType;
 import com.smartcampus.api.repository.ResourceRepository;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ResourceService {
 
-    @Autowired
-    private ResourceRepository resourceRepository;
+    private final ResourceRepository resourceRepository;
 
     public List<ResourceDTO> getAllResources() {
-        return resourceRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
+        return resourceRepository.findAll().stream().map(this::convertToDTO).toList();
+    }
+
+    public List<ResourceDTO> searchResources(ResourceType type, ResourceStatus status, String location, Integer minCapacity) {
+        return resourceRepository.searchResources(type, status, location, minCapacity)
+                .stream().map(this::convertToDTO).toList();
     }
 
     public ResourceDTO getResourceById(Long id) {
@@ -27,19 +32,27 @@ public class ResourceService {
         return convertToDTO(resource);
     }
 
-    public ResourceDTO createResource(ResourceDTO resourceDTO) {
-        Resource resource = convertToEntity(resourceDTO);
-        Resource savedResource = resourceRepository.save(resource);
-        return convertToDTO(savedResource);
+    public ResourceDTO createResource(ResourceDTO dto) {
+        Resource resource = new Resource();
+        resource.setName(dto.getName());
+        resource.setType(dto.getType());
+        resource.setCapacity(dto.getCapacity());
+        resource.setLocation(dto.getLocation());
+        resource.setAvailabilityWindows(dto.getAvailabilityWindows());
+        resource.setStatus(dto.getStatus());
+        return convertToDTO(resourceRepository.save(resource));
     }
 
-    public ResourceDTO updateResource(Long id, ResourceDTO resourceDTO) {
-        Resource existingResource = resourceRepository.findById(id)
+    public ResourceDTO updateResource(Long id, ResourceDTO dto) {
+        Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
-
-        BeanUtils.copyProperties(resourceDTO, existingResource, "id");
-        Resource updatedResource = resourceRepository.save(existingResource);
-        return convertToDTO(updatedResource);
+        resource.setName(dto.getName());
+        resource.setType(dto.getType());
+        resource.setCapacity(dto.getCapacity());
+        resource.setLocation(dto.getLocation());
+        resource.setAvailabilityWindows(dto.getAvailabilityWindows());
+        resource.setStatus(dto.getStatus());
+        return convertToDTO(resourceRepository.save(resource));
     }
 
     public void deleteResource(Long id) {
@@ -50,14 +63,14 @@ public class ResourceService {
     }
 
     private ResourceDTO convertToDTO(Resource resource) {
-        ResourceDTO resourceDTO = new ResourceDTO();
-        BeanUtils.copyProperties(resource, resourceDTO);
-        return resourceDTO;
-    }
-
-    private Resource convertToEntity(ResourceDTO resourceDTO) {
-        Resource resource = new Resource();
-        BeanUtils.copyProperties(resourceDTO, resource);
-        return resource;
+        return new ResourceDTO(
+                resource.getId(),
+                resource.getName(),
+                resource.getType(),
+                resource.getCapacity(),
+                resource.getLocation(),
+                resource.getAvailabilityWindows(),
+                resource.getStatus()
+        );
     }
 }
