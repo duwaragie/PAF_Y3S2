@@ -54,3 +54,7 @@ app:
     redirect-uri: http://localhost:5173/oauth2/redirect
   frontend:
     url: http://localhost:5173
+  seed:
+    admin-email: ${SEED_ADMIN_EMAIL:smartcampus.team@gmail.com}
+    admin-password: ${SEED_ADMIN_PASSWORD:Admin@1234!}
+    admin-name: ${SEED_ADMIN_NAME:Academic Curator Admin}

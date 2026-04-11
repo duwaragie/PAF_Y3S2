@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { adminService, type UserDTO } from '@/services/adminService';
-import { Logo } from '@/components/Logo';
+import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/store/authStore';
 
 const ROLES = ['STUDENT', 'LECTURER', 'ADMIN'] as const;
@@ -12,8 +11,6 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const currentUser = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
-  const navigate = useNavigate();
 
   useEffect(() => {
     loadUsers();
@@ -58,31 +55,8 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5]">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Logo variant="dark" size="sm" />
-            <div className="flex items-center gap-2">
-              <button onClick={() => navigate('/')} className="text-sm text-gray-500 hover:text-campus-700 transition-colors">
-                Dashboard
-              </button>
-              <span className="text-gray-300">/</span>
-              <span className="text-sm font-semibold text-campus-800">User Management</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{currentUser?.name}</span>
-            <button onClick={logout} className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto p-6 lg:p-8">
-        <div className="animate-slide-up space-y-6">
+    <AppLayout>
+      <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-campus-900">User Management</h1>
             <p className="text-sm text-gray-500 mt-1">View and manage all registered users, roles, and permissions.</p>
@@ -166,7 +140,6 @@ export default function UsersPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </AppLayout>
   );
 }

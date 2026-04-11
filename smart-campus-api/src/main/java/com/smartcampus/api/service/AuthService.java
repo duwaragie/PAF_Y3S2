@@ -111,11 +111,11 @@ public class AuthService {
         response.put("refreshToken", refreshToken);
         response.put("type", "Bearer");
         
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId());
-        userDTO.setEmail(user.getEmail());
-        userDTO.setName(user.getName());
-        userDTO.setRole(user.getRole());
+        UserDTO userDTO = new UserDTO(
+                user.getId(), user.getEmail(), user.getName(), user.getPicture(),
+                user.getRole(), user.getAuthProvider(), user.isEmailVerified(),
+                user.getCreatedAt(), user.getUpdatedAt()
+        );
         response.put("user", userDTO);
 
         return response;

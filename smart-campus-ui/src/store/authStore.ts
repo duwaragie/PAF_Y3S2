@@ -9,7 +9,9 @@ export interface User {
   picture: string;
   role: string;
   authProvider: string;
-  isEmailVerified: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthState {
