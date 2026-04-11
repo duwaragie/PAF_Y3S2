@@ -1,5 +1,4 @@
 import { api } from '@/lib/axios';
-import type { User } from '@/store/authStore';
 
 export interface UserDTO {
   id: number;
