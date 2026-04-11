@@ -7,6 +7,8 @@ export default function VerifyOtpPage() {
   const [searchParams] = useSearchParams();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -20,6 +22,28 @@ export default function VerifyOtpPage() {
     }
     inputRefs.current[0]?.focus();
   }, [email, navigate]);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleResend = async () => {
+    if (cooldown > 0 || isResending) return;
+    try {
+      setIsResending(true);
+      setError(null);
+      await api.post('/auth/resend-otp', { email });
+      setCooldown(60);
+    } catch (err) {
+      const errorResponse = err as { response?: { data?: { error?: string } } };
+      setError(errorResponse.response?.data?.error || 'Failed to resend code.');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
@@ -166,8 +190,13 @@ export default function VerifyOtpPage() {
           </Link>
           <span className="text-sm text-gray-400">
             Didn't receive code?{' '}
-            <button type="button" className="font-semibold text-campus-800 hover:text-campus-600 transition-colors">
-              Resend code
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={cooldown > 0 || isResending}
+              className="font-semibold text-campus-800 hover:text-campus-600 transition-colors disabled:text-gray-300 disabled:cursor-not-allowed"
+            >
+              {isResending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
             </button>
           </span>
         </div>

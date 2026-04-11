@@ -61,9 +61,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/status").permitAll()      // ← add this line
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/verify-email").permitAll()       // ← add this too
-                        .requestMatchers("/api/auth/refreshtoken").permitAll() // allow refresh tokens
+                        .requestMatchers("/api/auth/status").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/verify-email").permitAll()
+                        .requestMatchers("/api/auth/resend-otp", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                        .requestMatchers("/api/auth/refreshtoken").permitAll()
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()

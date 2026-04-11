@@ -1,6 +1,6 @@
 package com.smartcampus.api.repository;
 
-import com.smartcampus.api.model.OtpToken;
+import com.smartcampus.api.model.PasswordResetToken;
 import com.smartcampus.api.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -8,8 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface OtpTokenRepository extends JpaRepository<OtpToken, Long> {
-    Optional<OtpToken> findByUserAndOtpCode(User user, String otpCode);
-    Optional<OtpToken> findByUser(User user);
+public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
+    Optional<PasswordResetToken> findByUser(User user);
     void deleteByUser(User user);
 }

@@ -5,6 +5,8 @@ import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import VerifyOtpPage from './features/auth/pages/VerifyOtpPage';
 import OAuthRedirectHandler from './features/auth/pages/OAuthRedirectHandler';
+import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import { useAuthStore } from './store/authStore';
 import { Logo } from './components/Logo';
 
@@ -266,6 +268,8 @@ function App() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/verify" element={<PublicRoute><VerifyOtpPage /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
       <Route path="/oauth2/redirect" element={<OAuthRedirectHandler />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

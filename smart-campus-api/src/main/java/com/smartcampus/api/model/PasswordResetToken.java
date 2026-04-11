@@ -2,18 +2,21 @@ package com.smartcampus.api.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "otp_tokens")
+@Table(name = "password_reset_tokens")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OtpToken {
+@Builder
+public class PasswordResetToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,19 +26,16 @@ public class OtpToken {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // BCrypt hash of the raw reset token
     @Column(nullable = false)
-    private String otpCode;
+    private String tokenHash;
 
     @Column(nullable = false)
-    private LocalDateTime expiryDate;
+    private Instant expiryDate;
 
     // Track failed verification attempts (max 5)
     @Column(nullable = false, columnDefinition = "int default 0")
-    private int attempts = 0;
-
-    // Optional field to hold pending password updates
-    @Column(nullable = true)
-    private String tempPassword;
+    private int attempts;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

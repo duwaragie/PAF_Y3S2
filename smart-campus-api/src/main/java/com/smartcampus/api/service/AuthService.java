@@ -91,18 +91,23 @@ public class AuthService {
     }
 
     public Map<String, Object> login(LoginRequest request) {
+        // Check if user exists before attempting authentication
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("No account found with this email address."));
+
+        if (!user.isEmailVerified()) {
+            throw new RuntimeException("Email not verified. Please verify your email first.");
+        }
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
         String jwt = jwtService.generateToken(user);
         String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("token", jwt);
+        response.put("accessToken", jwt);
         response.put("refreshToken", refreshToken);
         response.put("type", "Bearer");
         
