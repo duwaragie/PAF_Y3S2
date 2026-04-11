@@ -15,7 +15,6 @@ public class EmailService {
 
     private static final String PRIMARY = "#0c1f3a";
     private static final String PRIMARY_LIGHT = "#1e3a5f";
-    private static final String ACCENT = "#f59e0b";
     private static final String BG = "#f0f2f5";
     private static final String WHITE = "#ffffff";
     private static final String TEXT = "#1e293b";
