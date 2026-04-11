@@ -3,6 +3,7 @@ package com.smartcampus.api.service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,9 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    @Value("${spring.mail.username}")
+    private String senderEmail;
+
     private static final String PRIMARY = "#0c1f3a";
     private static final String PRIMARY_LIGHT = "#1e3a5f";
     private static final String BG = "#f0f2f5";
@@ -22,7 +26,7 @@ public class EmailService {
     private static final String BORDER = "#e2e8f0";
 
     public void sendOtpEmail(String toEmail, String otpCode, int expiryMinutes) {
-        String subject = "Academic CuratorVerification Code";
+        String subject = "Academic Curator – Verification Code";
         String html = buildLayout(
             "Verify your email",
             "<p style=\"margin:0 0 24px;color:" + TEXT_MUTED + ";font-size:15px;line-height:1.6;\">"
@@ -39,7 +43,7 @@ public class EmailService {
     }
 
     public void sendPasswordResetEmail(String toEmail, String resetUrl, int expiryMinutes) {
-        String subject = "Academic CuratorReset Your Password";
+        String subject = "Academic Curator – Reset Your Password";
         String html = buildLayout(
             "Reset your password",
             "<p style=\"margin:0 0 24px;color:" + TEXT_MUTED + ";font-size:15px;line-height:1.6;\">"
@@ -100,12 +104,13 @@ public class EmailService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, "Academic Curator");
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
             mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send email", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 }

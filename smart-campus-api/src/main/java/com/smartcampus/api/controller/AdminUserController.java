@@ -1,9 +1,12 @@
 package com.smartcampus.api.controller;
 
+import com.smartcampus.api.dto.CreateUserRequest;
 import com.smartcampus.api.dto.UserDTO;
 import com.smartcampus.api.model.Role;
 import com.smartcampus.api.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +20,13 @@ import java.util.List;
 public class AdminUserController {
 
     private final UserService userService;
+
+    // POST /api/admin/users
+    @PostMapping
+    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody CreateUserRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(userService.createUser(request));
+    }
 
     // GET /api/admin/users
     @GetMapping

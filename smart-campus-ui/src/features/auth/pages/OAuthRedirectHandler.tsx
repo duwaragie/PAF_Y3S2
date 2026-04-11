@@ -24,7 +24,7 @@ export default function OAuthRedirectHandler() {
         try {
           useAuthStore.getState().setAuth(token, refreshToken, {
             id: 0, name: '', email: '', picture: '',
-            role: 'USER', authProvider: 'GOOGLE', isEmailVerified: true,
+            role: 'USER', authProvider: 'GOOGLE', emailVerified: true, createdAt: '', updatedAt: '',
           });
           const res = await authService.getMe();
           setAuth(token, refreshToken, res.data);
