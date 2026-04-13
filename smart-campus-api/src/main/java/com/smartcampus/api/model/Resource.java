@@ -27,6 +27,7 @@ public class Resource {
 
     private Integer capacity;
 
+    @Column(columnDefinition = "TEXT")
     private String location;
 
     @Column(name = "availability_windows")
