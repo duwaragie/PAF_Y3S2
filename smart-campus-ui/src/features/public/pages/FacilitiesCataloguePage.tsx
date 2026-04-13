@@ -34,7 +34,7 @@ export default function FacilitiesCataloguePage() {
 
   // Load resources when component mounts or when filters are reset
   useEffect(() => { 
-    executeSearch(searchParams); 
+    void executeSearch(searchParams); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -59,16 +59,16 @@ export default function FacilitiesCataloguePage() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSearching(true);
-    executeSearch(searchParams);
+    void executeSearch(searchParams);
   };
 
   const resetFilters = () => {
     const defaultParams = { status: 'ACTIVE' };
     setSearchParams(defaultParams);
-    executeSearch(defaultParams);
+    void executeSearch(defaultParams);
   };
 
   return (
@@ -205,9 +205,7 @@ export default function FacilitiesCataloguePage() {
                     <TableCell colSpan={7} className="px-5 py-16 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
-                          <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
-                          </svg>
+                          <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
                         </div>
                         <p className="text-sm font-semibold text-gray-900 mb-1">No facilities found</p>
                         <p className="text-xs text-gray-500">Adjust your search filters to find resources.</p>
