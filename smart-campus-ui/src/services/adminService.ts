@@ -6,6 +6,9 @@ export interface UserDTO {
   name: string;
   picture: string;
   role: string;
+  studentRegistrationNumber?: string | null;
+  employeeId?: string | null;
+  profileComplete?: boolean;
 }
 
 export interface CreateUserPayload {
@@ -30,4 +33,9 @@ export const adminService = {
 
   createUser: (data: CreateUserPayload) =>
     api.post<UserDTO>('/admin/users', data),
+
+  assignIdentifier: (
+    id: number,
+    payload: { studentRegistrationNumber?: string; employeeId?: string }
+  ) => api.patch<UserDTO>(`/admin/users/${id}/identifier`, null, { params: payload }),
 };

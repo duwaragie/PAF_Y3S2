@@ -8,6 +8,7 @@ import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import ProfilePage from './features/profile/pages/ProfilePage';
+import CompleteProfilePage from './features/profile/pages/CompleteProfilePage';
 import UsersPage from './features/admin/pages/UsersPage';
 import RegisterUserPage from './features/admin/pages/RegisterUserPage';
 import FacilitiesPage from './features/admin/pages/FacilitiesPage';
@@ -17,6 +18,14 @@ import NotificationsPage from './features/admin/pages/NotificationsPage';
 import { useAuthStore } from './store/authStore';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user && user.profileComplete === false) return <Navigate to="/complete-profile" replace />;
+  return children;
+}
+
+function AuthenticatedRoute({ children }: { children: React.ReactElement }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
@@ -31,6 +40,7 @@ function RoleRoute({ children, roles }: { children: React.ReactElement; roles: s
   const user = useAuthStore((state) => state.user);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user && user.profileComplete === false) return <Navigate to="/complete-profile" replace />;
   if (!user || !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 }
@@ -45,6 +55,9 @@ function App() {
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
       <Route path="/oauth2/redirect" element={<OAuthRedirectHandler />} />
+
+      {/* Profile completion gate (authenticated but profile incomplete) */}
+      <Route path="/complete-profile" element={<AuthenticatedRoute><CompleteProfilePage /></AuthenticatedRoute>} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

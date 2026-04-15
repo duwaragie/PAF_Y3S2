@@ -10,6 +10,9 @@ export interface User {
   role: string;
   authProvider: string;
   emailVerified: boolean;
+  studentRegistrationNumber?: string | null;
+  employeeId?: string | null;
+  profileComplete: boolean;
   createdAt: string;
   updatedAt: string;
 }

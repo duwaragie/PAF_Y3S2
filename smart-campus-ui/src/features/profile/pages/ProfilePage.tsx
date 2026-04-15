@@ -213,6 +213,9 @@ export default function ProfilePage() {
               { label: 'Email Verified', value: user?.emailVerified ? 'Yes' : 'No' },
               { label: 'Role', value: user?.role },
               { label: 'User ID', value: `#${user?.id}` },
+              ...(user?.role === 'STUDENT'
+                ? [{ label: 'Registration No.', value: user?.studentRegistrationNumber || '—' }]
+                : [{ label: 'Employee ID', value: user?.employeeId || '—' }]),
             ].map((item) => (
               <div key={item.label} className="p-3 rounded-xl bg-gray-50/80">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.label}</p>

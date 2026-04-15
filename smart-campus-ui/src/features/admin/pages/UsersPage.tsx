@@ -41,6 +41,29 @@ export default function UsersPage() {
     }
   };
 
+  const handleAssignIdentifier = async (user: UserDTO) => {
+    const isStudent = user.role === 'STUDENT';
+    const label = isStudent ? 'Student Registration Number' : 'Employee ID';
+    const current = isStudent ? user.studentRegistrationNumber : user.employeeId;
+    const input = window.prompt(`${label} for ${user.name}:`, current || '');
+    if (input === null) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    try {
+      setUpdatingId(user.id);
+      const payload = isStudent
+        ? { studentRegistrationNumber: trimmed }
+        : { employeeId: trimmed };
+      const res = await adminService.assignIdentifier(user.id, payload);
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? res.data : u)));
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || 'Failed to assign identifier.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleDelete = async (userId: number) => {
     if (userId === currentUser?.id) return;
     try {
@@ -85,6 +108,7 @@ export default function UsersPage() {
                       <th className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">User</th>
                       <th className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Email</th>
                       <th className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Role</th>
+                      <th className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Identifier</th>
                       <th className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
@@ -115,6 +139,26 @@ export default function UsersPage() {
                             ))}
                           </select>
                         </td>
+                        <td className="px-5 py-4">
+                          {(() => {
+                            const isStudent = user.role === 'STUDENT';
+                            const value = isStudent ? user.studentRegistrationNumber : user.employeeId;
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm font-mono ${value ? 'text-campus-800' : 'text-gray-300'}`}>
+                                  {value || '—'}
+                                </span>
+                                <button
+                                  onClick={() => handleAssignIdentifier(user)}
+                                  disabled={updatingId === user.id}
+                                  className="text-xs text-campus-600 hover:text-campus-800 font-medium disabled:opacity-30 transition-colors"
+                                >
+                                  {value ? 'Edit' : 'Assign'}
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td className="px-5 py-4 text-right">
                           <button
                             onClick={() => handleDelete(user.id)}
@@ -128,7 +172,7 @@ export default function UsersPage() {
                     ))}
                     {users.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-5 py-12 text-center text-sm text-gray-400">No users found.</td>
+                        <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">No users found.</td>
                       </tr>
                     )}
                   </tbody>

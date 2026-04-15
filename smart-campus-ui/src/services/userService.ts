@@ -4,6 +4,8 @@ import type { User } from '@/store/authStore';
 export interface UpdateProfilePayload {
   name: string;
   picture?: string;
+  studentRegistrationNumber?: string;
+  employeeId?: string;
 }
 
 export interface ChangePasswordPayload {
