@@ -1,6 +1,5 @@
 package com.smartcampus.api.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +39,47 @@ public class EmailService {
                 + "</p>"
         );
         send(toEmail, subject, html);
+    }
+
+    public void sendContactEmail(String toEmail, String replyToEmail, String senderName, String subject, String messageBody) {
+        String mailSubject = "[Contact] " + subject;
+        String safeName = escapeHtml(senderName);
+        String safeEmail = escapeHtml(replyToEmail);
+        String safeSubject = escapeHtml(subject);
+        String safeBody = escapeHtml(messageBody).replace("\n", "<br>");
+
+        String html = buildLayout(
+            "New contact message",
+            "<p style=\"margin:0 0 24px;color:" + TEXT_MUTED + ";font-size:15px;line-height:1.6;\">"
+                + "Someone reached out via the Academic Curator contact form."
+                + "</p>"
+                + "<table cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;margin:0 0 24px;font-size:13px;color:" + TEXT + ";\">"
+                + "  <tr><td style=\"padding:8px 0;color:" + TEXT_MUTED + ";width:110px;\">From</td>"
+                + "      <td style=\"padding:8px 0;font-weight:600;\">" + safeName + "</td></tr>"
+                + "  <tr><td style=\"padding:8px 0;color:" + TEXT_MUTED + ";\">Email</td>"
+                + "      <td style=\"padding:8px 0;font-weight:600;\"><a href=\"mailto:" + safeEmail + "\" style=\"color:" + PRIMARY_LIGHT + ";text-decoration:none;\">" + safeEmail + "</a></td></tr>"
+                + "  <tr><td style=\"padding:8px 0;color:" + TEXT_MUTED + ";\">Subject</td>"
+                + "      <td style=\"padding:8px 0;font-weight:600;\">" + safeSubject + "</td></tr>"
+                + "</table>"
+                + "<div style=\"background:" + BG + ";border-radius:12px;padding:20px;margin:0 0 24px;\">"
+                + "  <p style=\"margin:0 0 8px;color:" + TEXT_MUTED + ";font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;\">Message</p>"
+                + "  <p style=\"margin:0;color:" + TEXT + ";font-size:14px;line-height:1.7;white-space:pre-line;\">" + safeBody + "</p>"
+                + "</div>"
+                + "<p style=\"margin:0;color:" + TEXT_MUTED + ";font-size:12px;line-height:1.5;\">"
+                + "Reply directly to this email to respond to " + safeName + "."
+                + "</p>"
+        );
+
+        sendWithReplyTo(toEmail, mailSubject, html, replyToEmail, senderName);
+    }
+
+    private String escapeHtml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     public void sendPasswordResetEmail(String toEmail, String resetUrl, int expiryMinutes) {
@@ -106,6 +146,21 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(senderEmail, "Academic Curator");
             helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
+        }
+    }
+
+    private void sendWithReplyTo(String to, String subject, String htmlContent, String replyTo, String replyToName) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, "Academic Curator");
+            helper.setTo(to);
+            helper.setReplyTo(replyTo, replyToName);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
             mailSender.send(message);
