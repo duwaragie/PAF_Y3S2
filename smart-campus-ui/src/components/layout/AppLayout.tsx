@@ -11,7 +11,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zm-11 0h7v7H3v-7z' },
+  { label: 'Dashboard', href: '/dashboard', icon: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zm-11 0h7v7H3v-7z' },
   { label: 'Profile', href: '/profile', icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
   { label: 'Facilities', href: '/admin/facilities', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z', roles: ['ADMIN'] },
   { label: 'Bookings', href: '/admin/bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z', roles: ['ADMIN'] },
@@ -31,7 +31,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const isActive = (href: string) =>
-    href === '/' ? location.pathname === '/' : location.pathname.startsWith(href);
+    href === '/dashboard' ? location.pathname === '/dashboard' : location.pathname.startsWith(href);
 
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
@@ -44,7 +44,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               {['Dashboard', 'Courses', 'Research', 'Campus'].map((item, i) => (
                 <Link
                   key={item}
-                  to={i === 0 ? '/' : '#'}
+                  to={i === 0 ? '/dashboard' : '#'}
                   className={`px-3.5 py-2 text-sm font-medium rounded-lg transition-colors ${i === 0 ? 'text-campus-800 bg-campus-50 font-semibold' : 'text-gray-500 hover:text-campus-700 hover:bg-gray-50'}`}
                 >
                   {item}

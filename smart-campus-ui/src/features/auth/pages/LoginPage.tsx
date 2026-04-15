@@ -36,7 +36,7 @@ export default function LoginPage() {
       const res = await authService.login(data.email, data.password);
       const { accessToken, refreshToken, user } = res.data;
       setAuth(accessToken, refreshToken, user);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       const errorResponse = err as { response?: { status?: number; data?: { message?: string } } };
       if (errorResponse.response?.status === 403 && errorResponse.response?.data?.message?.includes('verified')) {
@@ -191,25 +191,12 @@ export default function LoginPage() {
           Sign in with Google
         </button>
 
-        {/* Footer */}
         <p className="text-center text-sm text-gray-500">
           New to the campus?{' '}
           <Link to="/register" className="font-bold text-campus-800 hover:text-campus-600 transition-colors">
             Create account
           </Link>
         </p>
-
-        {/* Bottom links */}
-        <div className="pt-6 border-t border-gray-100">
-          <div className="flex items-center justify-center gap-6 text-xs text-gray-400">
-            <span>Privacy Policy</span>
-            <span>Terms of Service</span>
-            <span>Support</span>
-          </div>
-          <p className="text-center text-[10px] text-gray-300 mt-3 tracking-wider uppercase">
-            &copy; {new Date().getFullYear()} Academic Curator &bull; Institutional System
-          </p>
-        </div>
       </div>
     </AuthLayout>
   );

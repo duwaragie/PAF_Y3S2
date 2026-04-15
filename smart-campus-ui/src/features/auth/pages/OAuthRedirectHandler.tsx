@@ -28,7 +28,7 @@ export default function OAuthRedirectHandler() {
           });
           const res = await authService.getMe();
           setAuth(token, refreshToken, res.data);
-          navigate('/');
+          navigate('/dashboard');
         } catch (err) {
           console.error("Failed fetching user profile", err);
           navigate('/login');

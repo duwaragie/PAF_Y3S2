@@ -39,7 +39,7 @@ export default function CompleteProfilePage() {
         studentRegistrationNumber: data.studentRegistrationNumber.trim(),
       });
       updateUser(res.data);
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || 'Could not save registration number. It may already be in use.');

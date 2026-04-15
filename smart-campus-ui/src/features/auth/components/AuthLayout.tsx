@@ -85,20 +85,36 @@ export function AuthLayout({
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-white">
-        <div className="w-full max-w-[440px] animate-slide-up">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex justify-center mb-10">
-            <Logo variant="dark" size="lg" />
-          </div>
+      <div className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 flex justify-center px-6 sm:px-10 pt-20 sm:pt-24 pb-10">
+          <div className="w-full max-w-[440px] animate-slide-up">
+            {/* Mobile logo */}
+            <div className="lg:hidden flex justify-center mb-10">
+              <Logo variant="dark" size="lg" />
+            </div>
 
-          <div className="space-y-1.5 mb-8">
-            <h2 className="text-[1.75rem] font-bold tracking-tight text-campus-900">{title}</h2>
-            <p className="text-campus-400 text-[15px]">{description}</p>
-          </div>
+            <div className="space-y-1.5 mb-8">
+              <h2 className="text-[1.75rem] font-bold tracking-tight text-campus-900">{title}</h2>
+              <p className="text-campus-400 text-[15px]">{description}</p>
+            </div>
 
-          {children}
+            {children}
+          </div>
         </div>
+
+        {/* Right-panel footer */}
+        <footer className="border-t border-gray-100 py-5 px-6">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-6 text-xs text-gray-400">
+              <a href="#" className="hover:text-campus-700 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-campus-700 transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-campus-700 transition-colors">Support</a>
+            </div>
+            <p className="text-[10px] text-gray-300 tracking-wider uppercase">
+              &copy; {new Date().getFullYear()} Academic Curator &bull; Institutional System
+            </p>
+          </div>
+        </footer>
       </div>
     </div>
   );
