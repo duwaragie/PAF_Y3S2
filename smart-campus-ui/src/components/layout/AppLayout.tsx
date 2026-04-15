@@ -39,7 +39,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Logo variant="dark" size="sm" />
+            <Link to="/" className="inline-flex hover:opacity-90 transition-opacity">
+              <Logo variant="dark" size="sm" />
+            </Link>
             <nav className="hidden md:flex items-center gap-1">
               {['Dashboard', 'Courses', 'Research', 'Campus'].map((item, i) => (
                 <Link
@@ -58,16 +60,45 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
             </button>
-            <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+            <div className="relative group flex items-center gap-3 pl-3 border-l border-gray-200">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-campus-800 leading-tight">{user?.name}</p>
                 <p className="text-[11px] text-gray-400">{user?.role}</p>
               </div>
-              <Link to="/profile">
+              <Link to="/profile" aria-label="Open profile">
                 <div className="w-10 h-10 rounded-full bg-campus-600 text-white flex items-center justify-center text-sm font-bold ring-2 ring-campus-100 hover:ring-campus-300 transition-all">
                   {user?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               </Link>
+
+              {/* Hover dropdown */}
+              <div className="absolute right-0 top-full pt-3 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all duration-150">
+                <div className="bg-white border border-gray-100 rounded-xl shadow-lg py-2">
+                  <div className="px-4 py-2 border-b border-gray-50">
+                    <p className="text-sm font-semibold text-campus-800 truncate">{user?.name}</p>
+                    <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+                  </div>
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-campus-800 hover:bg-campus-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    View profile
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                    </svg>
+                    Log out
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

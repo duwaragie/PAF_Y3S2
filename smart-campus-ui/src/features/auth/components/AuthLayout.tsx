@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
 
 interface AuthLayoutProps {
@@ -36,7 +37,9 @@ export function AuthLayout({
 
         <div className="relative z-10 flex flex-col justify-between h-full p-10 xl:p-12">
           {/* Logo */}
-          <Logo variant="light" size="lg" />
+          <Link to="/" className="inline-flex hover:opacity-90 transition-opacity">
+            <Logo variant="light" size="lg" />
+          </Link>
 
           {/* Main content */}
           <div className="space-y-6 -mt-8">
@@ -90,7 +93,9 @@ export function AuthLayout({
           <div className="w-full max-w-[440px] animate-slide-up">
             {/* Mobile logo */}
             <div className="lg:hidden flex justify-center mb-10">
-              <Logo variant="dark" size="lg" />
+              <Link to="/" className="inline-flex hover:opacity-90 transition-opacity">
+                <Logo variant="dark" size="lg" />
+              </Link>
             </div>
 
             <div className="space-y-1.5 mb-8">
