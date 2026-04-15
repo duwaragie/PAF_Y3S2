@@ -290,9 +290,9 @@ export default function FacilitiesPage() {
                       <td className="px-5 py-4 text-sm font-mono text-gray-500">#{r.id}</td>
                       <td className="px-5 py-4 text-sm font-semibold text-campus-800">{r.name}</td>
                       <td className="px-5 py-4 text-sm text-gray-600">{typeLabels[r.type] || r.type}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600">{r.capacity ?? '—'}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600">{r.location || '—'}</td>
-                      <td className="px-5 py-4 text-sm text-gray-500">{r.availabilityWindows || '—'}</td>
+                      <td className="px-5 py-4 text-sm text-gray-600">{r.capacity ?? ''}</td>
+                      <td className="px-5 py-4 text-sm text-gray-600">{r.location || ''}</td>
+                      <td className="px-5 py-4 text-sm text-gray-500">{r.availabilityWindows || ''}</td>
                       <td className="px-5 py-4">
                         <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${statusStyle[r.status]}`}>{r.status.replace(/_/g, ' ')}</span>
                       </td>

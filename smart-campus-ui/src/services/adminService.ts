@@ -16,6 +16,7 @@ export interface CreateUserPayload {
   email: string;
   password: string;
   role: 'LECTURER' | 'ADMIN';
+  employeeId: string;
 }
 
 export const adminService = {
@@ -30,6 +31,9 @@ export const adminService = {
 
   deleteUser: (id: number) =>
     api.delete(`/admin/users/${id}`),
+
+  bulkDeleteUsers: (ids: number[]) =>
+    api.post<{ deleted: number }>('/admin/users/bulk-delete', { ids }),
 
   createUser: (data: CreateUserPayload) =>
     api.post<UserDTO>('/admin/users', data),

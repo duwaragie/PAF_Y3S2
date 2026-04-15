@@ -4,9 +4,9 @@ export default function StudentDashboard() {
   const user = useAuthStore((s) => s.user);
 
   const stats = [
-    { label: 'My Bookings', value: '—', desc: 'Active reservations for labs and libraries.', color: 'bg-campus-50 text-campus-700' },
-    { label: 'Open Tickets', value: '—', desc: 'Support requests awaiting review.', color: 'bg-amber-50 text-amber-700' },
-    { label: 'Notifications', value: '—', desc: 'New updates from courses and faculty.', color: 'bg-blue-50 text-blue-700' },
+    { label: 'My Bookings', value: '0', desc: 'Active reservations for labs and libraries.', color: 'bg-campus-50 text-campus-700' },
+    { label: 'Open Tickets', value: '0', desc: 'Support requests awaiting review.', color: 'bg-amber-50 text-amber-700' },
+    { label: 'Notifications', value: '0', desc: 'New updates from courses and faculty.', color: 'bg-blue-50 text-blue-700' },
   ];
 
   return (

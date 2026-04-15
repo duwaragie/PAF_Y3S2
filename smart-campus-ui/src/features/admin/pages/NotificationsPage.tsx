@@ -1,9 +1,9 @@
 import AppLayout from '@/components/layout/AppLayout';
 
 const notifications = [
-  { id: 1, title: 'Scheduled Maintenance — Block A', body: 'Block A will undergo electrical maintenance on April 20. All labs will be closed from 08:00 to 17:00.', audience: 'All', status: 'Sent', sentAt: '2026-04-10' },
+  { id: 1, title: 'Scheduled Maintenance: Block A', body: 'Block A will undergo electrical maintenance on April 20. All labs will be closed from 08:00 to 17:00.', audience: 'All', status: 'Sent', sentAt: '2026-04-10' },
   { id: 2, title: 'New Booking Policy Update', body: 'Starting May 1, all bookings must be made at least 48 hours in advance. Same-day bookings require admin approval.', audience: 'Students', status: 'Draft', sentAt: null },
-  { id: 3, title: 'Faculty Meeting — End of Semester', body: 'All lecturers are requested to attend the end-of-semester review meeting on April 25 at 10:00 in Hall C-301.', audience: 'Lecturers', status: 'Sent', sentAt: '2026-04-08' },
+  { id: 3, title: 'Faculty Meeting: End of Semester', body: 'All lecturers are requested to attend the end-of-semester review meeting on April 25 at 10:00 in Hall C-301.', audience: 'Lecturers', status: 'Sent', sentAt: '2026-04-08' },
 ];
 
 const audienceStyle: Record<string, string> = {

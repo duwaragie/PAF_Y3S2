@@ -59,7 +59,7 @@ export default function BookingsPage() {
                           <button className="text-xs font-semibold text-red-500 hover:text-red-700">Reject</button>
                         </>
                       )}
-                      {b.status !== 'PENDING' && <span className="text-xs text-gray-400">—</span>}
+                      {b.status !== 'PENDING' && <span className="text-xs text-gray-400">No action</span>}
                     </td>
                   </tr>
                 ))}

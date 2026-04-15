@@ -12,9 +12,9 @@ export default function AdminDashboard() {
   }, []);
 
   const stats = [
-    { label: 'Total Users', value: String(users.length || '—'), desc: 'Registered accounts across all roles.', color: 'bg-campus-50 text-campus-700' },
-    { label: 'Pending Bookings', value: '—', desc: 'Booking requests awaiting approval.', color: 'bg-amber-50 text-amber-700' },
-    { label: 'Open Incidents', value: '—', desc: 'Active incident tickets.', color: 'bg-red-50 text-red-700' },
+    { label: 'Total Users', value: String(users.length || 0), desc: 'Registered accounts across all roles.', color: 'bg-campus-50 text-campus-700' },
+    { label: 'Pending Bookings', value: '0', desc: 'Booking requests awaiting approval.', color: 'bg-amber-50 text-amber-700' },
+    { label: 'Open Incidents', value: '0', desc: 'Active incident tickets.', color: 'bg-red-50 text-red-700' },
     { label: 'System Health', value: 'OK', desc: 'All services running normally.', color: 'bg-emerald-50 text-emerald-700' },
   ];
 

@@ -75,7 +75,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="hidden lg:flex w-[220px] flex-col bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16">
+        <aside className="hidden lg:flex w-[220px] flex-col bg-white border-r border-gray-200 h-[calc(100vh-64px)] sticky top-16 overflow-y-auto">
           <div className="p-4">
             <div className="flex items-center gap-3 p-3 bg-campus-50 rounded-xl mb-6">
               <div className="w-10 h-10 rounded-full bg-campus-600 text-white flex items-center justify-center">
@@ -129,8 +129,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8 max-w-[1100px]">
-          <div className="animate-slide-up">
+        <main className="flex-1 p-6 lg:p-8">
+          <div className="max-w-[1400px] mx-auto animate-slide-up">
             {children}
           </div>
         </main>

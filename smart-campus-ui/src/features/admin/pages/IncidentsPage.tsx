@@ -1,7 +1,7 @@
 import AppLayout from '@/components/layout/AppLayout';
 
 const tickets = [
-  { id: 'TKT-001', title: 'Broken projector in Lab 101', reporter: 'Jane Smith', category: 'Equipment', priority: 'HIGH', status: 'OPEN', assignedTo: '—' },
+  { id: 'TKT-001', title: 'Broken projector in Lab 101', reporter: 'Jane Smith', category: 'Equipment', priority: 'HIGH', status: 'OPEN', assignedTo: 'Unassigned' },
   { id: 'TKT-002', title: 'AC not working in B-201', reporter: 'Dr. Perera', category: 'Facility', priority: 'MEDIUM', status: 'IN_PROGRESS', assignedTo: 'John Technician' },
   { id: 'TKT-003', title: 'Network issues in Library', reporter: 'Student User', category: 'IT', priority: 'LOW', status: 'RESOLVED', assignedTo: 'IT Support' },
 ];

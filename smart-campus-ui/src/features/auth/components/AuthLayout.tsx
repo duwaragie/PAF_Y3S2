@@ -31,7 +31,7 @@ export function AuthLayout({
           className="absolute inset-0 bg-cover bg-center opacity-40"
           style={{ backgroundImage: "url('/geometric-bg.png')" }}
         />
-        {/* Gradient overlay — subtle so geometric pattern shows through */}
+        {/* Gradient overlay, subtle so geometric pattern shows through */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0c1f3a]/60 via-[#0f2847]/40 to-[#132d4f]/30" />
 
         <div className="relative z-10 flex flex-col justify-between h-full p-10 xl:p-12">

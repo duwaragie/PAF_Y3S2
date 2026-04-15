@@ -4,9 +4,9 @@ export default function LecturerDashboard() {
   const user = useAuthStore((s) => s.user);
 
   const stats = [
-    { label: 'My Courses', value: '—', desc: 'Courses assigned this semester.', color: 'bg-purple-50 text-purple-700' },
-    { label: 'Assigned Tickets', value: '—', desc: 'Maintenance tickets awaiting your action.', color: 'bg-amber-50 text-amber-700' },
-    { label: 'Upcoming Classes', value: '—', desc: 'Scheduled sessions this week.', color: 'bg-campus-50 text-campus-700' },
+    { label: 'My Courses', value: '0', desc: 'Courses assigned this semester.', color: 'bg-purple-50 text-purple-700' },
+    { label: 'Assigned Tickets', value: '0', desc: 'Maintenance tickets awaiting your action.', color: 'bg-amber-50 text-amber-700' },
+    { label: 'Upcoming Classes', value: '0', desc: 'Scheduled sessions this week.', color: 'bg-campus-50 text-campus-700' },
   ];
 
   return (

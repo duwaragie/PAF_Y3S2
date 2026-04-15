@@ -174,7 +174,7 @@ export default function VerifyOtpPage() {
               Verifying...
             </span>
           ) : success ? (
-            'Verified — Redirecting'
+            'Verified, redirecting'
           ) : (
             'Verify email'
           )}
