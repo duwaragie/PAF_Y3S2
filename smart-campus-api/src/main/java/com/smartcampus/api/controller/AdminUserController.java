@@ -63,4 +63,12 @@ public class AdminUserController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    // POST /api/admin/users/bulk-delete  { "ids": [1,2,3] }
+    @PostMapping("/bulk-delete")
+    public ResponseEntity<java.util.Map<String, Integer>> bulkDelete(
+            @RequestBody java.util.Map<String, java.util.List<Long>> body) {
+        int deleted = userService.deleteUsers(body.getOrDefault("ids", java.util.List.of()));
+        return ResponseEntity.ok(java.util.Map.of("deleted", deleted));
+    }
 }

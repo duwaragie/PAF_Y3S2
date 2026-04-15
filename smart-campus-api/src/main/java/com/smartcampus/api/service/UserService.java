@@ -103,6 +103,13 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
+    public int deleteUsers(java.util.List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        java.util.List<User> found = userRepository.findAllById(ids);
+        userRepository.deleteAll(found);
+        return found.size();
+    }
+
     public UserDTO updateProfile(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
@@ -146,6 +153,13 @@ public class UserService {
         if (request.getRole() == Role.STUDENT) {
             throw new RuntimeException("Cannot create STUDENT accounts via admin endpoint.");
         }
+        String employeeId = request.getEmployeeId() != null ? request.getEmployeeId().trim() : "";
+        if (employeeId.isBlank()) {
+            throw new RuntimeException("Employee ID is required for staff accounts.");
+        }
+        if (userRepository.existsByEmployeeId(employeeId)) {
+            throw new RuntimeException("Employee ID already in use.");
+        }
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
@@ -153,6 +167,7 @@ public class UserService {
         user.setRole(request.getRole());
         user.setAuthProvider(AuthProvider.LOCAL);
         user.setEmailVerified(true);
+        user.setEmployeeId(employeeId);
         return convertToDTO(userRepository.save(user));
     }
 }

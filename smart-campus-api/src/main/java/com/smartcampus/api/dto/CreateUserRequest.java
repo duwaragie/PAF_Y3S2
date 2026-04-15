@@ -26,4 +26,7 @@ public class CreateUserRequest {
 
     @NotNull(message = "Role is required")
     private Role role;
+
+    @NotBlank(message = "Employee ID is required for staff accounts")
+    private String employeeId;
 }
