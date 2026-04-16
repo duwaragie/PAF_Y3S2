@@ -36,4 +36,7 @@ public class Resource {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ResourceStatus status;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 }

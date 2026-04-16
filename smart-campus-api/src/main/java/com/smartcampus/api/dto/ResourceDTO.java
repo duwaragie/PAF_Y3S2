@@ -28,4 +28,6 @@ public class ResourceDTO {
 
     @NotNull(message = "Status is required")
     private ResourceStatus status;
+
+    private String imageUrl;
 }

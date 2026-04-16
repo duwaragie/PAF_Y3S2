@@ -40,6 +40,7 @@ public class ResourceService {
         resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(dto.getAvailabilityWindows());
         resource.setStatus(dto.getStatus());
+        resource.setImageUrl(dto.getImageUrl()); // Set the image URL
         return convertToDTO(resourceRepository.save(resource));
     }
 
@@ -52,6 +53,7 @@ public class ResourceService {
         resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(dto.getAvailabilityWindows());
         resource.setStatus(dto.getStatus());
+        resource.setImageUrl(dto.getImageUrl()); // Update the image URL
         return convertToDTO(resourceRepository.save(resource));
     }
 
@@ -70,7 +72,8 @@ public class ResourceService {
                 resource.getCapacity(),
                 resource.getLocation(),
                 resource.getAvailabilityWindows(),
-                resource.getStatus()
+                resource.getStatus(),
+                resource.getImageUrl() // Include image URL in the response
         );
     }
 }
