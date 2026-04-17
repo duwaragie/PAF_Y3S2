@@ -8,6 +8,9 @@ export interface ResourceDTO {
   location: string;
   availabilityWindows: string;
   status: 'ACTIVE' | 'OUT_OF_SERVICE' | 'UNDER_MAINTENANCE';
+  imageUrl?: string;
+  assetIds?: number[];
+  amenityIds?: number[];
 }
 
 export interface ResourceSearchParams {
