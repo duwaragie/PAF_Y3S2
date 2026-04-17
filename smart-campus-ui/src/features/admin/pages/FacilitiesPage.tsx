@@ -75,7 +75,7 @@ export default function FacilitiesPage() {
       setIsSearching(true);
       setError(null);
       const cleanParams = Object.fromEntries(
-          Object.entries(searchParams).filter(([_, v]) => v !== '' && v != null)
+          Object.entries(searchParams).filter(([v]) => v !== '' && v != null)
       );
 
       const res = Object.keys(cleanParams).length > 0
