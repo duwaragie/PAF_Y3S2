@@ -12,6 +12,8 @@ import CompleteProfilePage from './features/profile/pages/CompleteProfilePage';
 import UsersPage from './features/admin/pages/UsersPage';
 import RegisterUserPage from './features/admin/pages/RegisterUserPage';
 import FacilitiesPage from './features/admin/pages/FacilitiesPage';
+import AssetsAdminPage from './features/admin/pages/AssetsAdminPage';
+import AmenitiesAdminPage from './features/admin/pages/AmenitiesAdminPage';
 import BookingsPage from './features/admin/pages/BookingsPage';
 import IncidentsPage from './features/admin/pages/IncidentsPage';
 import NotificationsPage from './features/admin/pages/NotificationsPage';
@@ -80,6 +82,8 @@ function App() {
       <Route path="/admin/users" element={<RoleRoute roles={['ADMIN']}><UsersPage /></RoleRoute>} />
       <Route path="/admin/register-user" element={<RoleRoute roles={['ADMIN']}><RegisterUserPage /></RoleRoute>} />
       <Route path="/admin/facilities" element={<RoleRoute roles={['ADMIN']}><FacilitiesPage /></RoleRoute>} />
+      <Route path="/admin/assets" element={<RoleRoute roles={['ADMIN']}><AssetsAdminPage /></RoleRoute>} />
+      <Route path="/admin/amenities" element={<RoleRoute roles={['ADMIN']}><AmenitiesAdminPage /></RoleRoute>} />
       <Route path="/admin/bookings" element={<RoleRoute roles={['ADMIN']}><BookingsPage /></RoleRoute>} />
       <Route path="/admin/incidents" element={<RoleRoute roles={['ADMIN']}><IncidentsPage /></RoleRoute>} />
       <Route path="/admin/notifications" element={<RoleRoute roles={['ADMIN']}><NotificationsPage /></RoleRoute>} />

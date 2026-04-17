@@ -8,7 +8,9 @@ export interface ResourceDTO {
   location: string;
   availabilityWindows: string;
   status: 'ACTIVE' | 'OUT_OF_SERVICE' | 'UNDER_MAINTENANCE';
-  imageUrl?: string | null;
+  imageUrl?: string;
+  assetIds?: number[];
+  amenityIds?: number[];
 }
 
 export interface ResourceSearchParams {
@@ -16,6 +18,8 @@ export interface ResourceSearchParams {
   status?: string;
   location?: string;
   minCapacity?: number;
+  assetIds?: number[];
+  amenityIds?: number[];
 }
 
 export const resourceService = {

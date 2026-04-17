@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { resourceService, type ResourceDTO, type ResourceSearchParams } from '@/services/resourceService';
+import { assetService, type AssetDTO } from '@/services/assetService';
+import { amenityService, type AmenityDTO } from '@/services/amenityService';
 
 const TYPES = ['LECTURE_HALL', 'LAB', 'MEETING_ROOM', 'EQUIPMENT'] as const;
 
@@ -13,6 +15,8 @@ const typeLabels: Record<string, string> = {
 
 export default function FacilitiesCataloguePage() {
   const [resources, setResources] = useState<ResourceDTO[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<AssetDTO[]>([]);
+  const [availableAmenities, setAvailableAmenities] = useState<AmenityDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +28,10 @@ export default function FacilitiesCataloguePage() {
         setIsLoading(true);
         setError(null);
         const cleanParams = Object.fromEntries(
-          Object.entries(searchParams).filter(([, v]) => v !== '' && v != null)
+          Object.entries(searchParams).filter(([, v]) => {
+            if (Array.isArray(v)) return v.length > 0;
+            return v !== '' && v != null;
+          })
         );
         const res = Object.keys(cleanParams).length > 0
           ? await resourceService.search(cleanParams)
@@ -39,10 +46,50 @@ export default function FacilitiesCataloguePage() {
     void run();
   }, [searchParams]);
 
+  useEffect(() => {
+    const loadCatalogues = async () => {
+      try {
+        const [resAssets, resAmenities] = await Promise.all([
+          assetService.getAll().catch(() => ({ data: [] })),
+          amenityService.getAll().catch(() => ({ data: [] })),
+        ]);
+        setAvailableAssets(resAssets.data);
+        setAvailableAmenities(resAmenities.data);
+      } catch {
+        // non-blocking
+      }
+    };
+    void loadCatalogues();
+  }, []);
+
   const resetFilters = () => setSearchParams({ status: 'ACTIVE' });
-  const hasExtraFilters = (['type', 'location', 'minCapacity'] as const).some(
-    (k) => searchParams[k] !== '' && searchParams[k] != null
+  const hasExtraFilters = (['type', 'location', 'minCapacity', 'assetIds', 'amenityIds'] as const).some(
+    (k) => {
+      const v = searchParams[k];
+      if (Array.isArray(v)) return v.length > 0;
+      return v !== '' && v != null;
+    }
   );
+
+  const toggleAssetFilter = (id: number) => {
+    setSearchParams((prev) => {
+      const current = prev.assetIds || [];
+      return {
+        ...prev,
+        assetIds: current.includes(id) ? current.filter((a) => a !== id) : [...current, id],
+      };
+    });
+  };
+
+  const toggleAmenityFilter = (id: number) => {
+    setSearchParams((prev) => {
+      const current = prev.amenityIds || [];
+      return {
+        ...prev,
+        amenityIds: current.includes(id) ? current.filter((a) => a !== id) : [...current, id],
+      };
+    });
+  };
 
   return (
     <AppLayout>
@@ -106,6 +153,52 @@ export default function FacilitiesCataloguePage() {
               </button>
             )}
           </div>
+
+          {(availableAssets.length > 0 || availableAmenities.length > 0) && (
+            <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+              {availableAssets.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Assets</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableAssets.map((a) => {
+                      const active = (searchParams.assetIds || []).includes(a.id);
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => toggleAssetFilter(a.id)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
+                        >
+                          {a.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {availableAmenities.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Amenities</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableAmenities.map((a) => {
+                      const active = (searchParams.amenityIds || []).includes(a.id);
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => toggleAmenityFilter(a.id)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${active ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-purple-50 hover:border-purple-200'}`}
+                        >
+                          {a.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {isLoading ? (

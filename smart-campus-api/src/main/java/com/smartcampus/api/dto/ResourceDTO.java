@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
+import java.util.ArrayList;
 
 @Data
 @NoArgsConstructor
@@ -30,4 +32,8 @@ public class ResourceDTO {
     private ResourceStatus status;
 
     private String imageUrl;
+
+    private List<Long> assetIds = new ArrayList<>();
+    
+    private List<Long> amenityIds = new ArrayList<>();
 }

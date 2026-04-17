@@ -13,18 +13,25 @@ import java.util.List;
 @Repository
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
 
-    List<Resource> findByType(ResourceType type);
-
-    List<Resource> findByStatus(ResourceStatus status);
-
-    @Query("SELECT r FROM Resource r WHERE " +
-            "(:type IS NULL OR r.type = :type) AND " +
-            "(:status IS NULL OR r.status = :status) AND " +
-            "(:location IS NULL OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:location AS string), '%'))) AND " +
-            "(:minCapacity IS NULL OR r.capacity >= :minCapacity)")
+    @Query("SELECT r FROM Resource r " +
+           "LEFT JOIN r.assets a " +
+           "LEFT JOIN r.amenities am " +
+           "WHERE (:type IS NULL OR r.type = :type) " +
+           "AND (:status IS NULL OR r.status = :status) " +
+           "AND (:location IS NULL OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:location AS string), '%'))) " +
+           "AND (:minCapacity IS NULL OR r.capacity >= :minCapacity) " +
+           "AND (:assetIds IS NULL OR a.id IN :assetIds) " +
+           "AND (:amenityIds IS NULL OR am.id IN :amenityIds) " +
+           "GROUP BY r.id " +
+           "HAVING (:assetIds IS NULL OR COUNT(DISTINCT a.id) = :assetIdCount) " +
+           "AND (:amenityIds IS NULL OR COUNT(DISTINCT am.id) = :amenityIdCount)")
     List<Resource> searchResources(
             @Param("type") ResourceType type,
             @Param("status") ResourceStatus status,
             @Param("location") String location,
-            @Param("minCapacity") Integer minCapacity);
+            @Param("minCapacity") Integer minCapacity,
+            @Param("assetIds") List<Long> assetIds,
+            @Param("assetIdCount") Long assetIdCount,
+            @Param("amenityIds") List<Long> amenityIds,
+            @Param("amenityIdCount") Long amenityIdCount);
 }

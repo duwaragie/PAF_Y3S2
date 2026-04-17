@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.Set;
+import java.util.HashSet;
 
 @Data
 @Builder
@@ -39,4 +41,22 @@ public class Resource {
 
     @Column(name = "image_url")
     private String imageUrl;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "resource_assets",
+        joinColumns = @JoinColumn(name = "resource_id"),
+        inverseJoinColumns = @JoinColumn(name = "asset_id")
+    )
+    @Builder.Default
+    private Set<Asset> assets = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "resource_amenities",
+        joinColumns = @JoinColumn(name = "resource_id"),
+        inverseJoinColumns = @JoinColumn(name = "amenity_id")
+    )
+    @Builder.Default
+    private Set<Amenity> amenities = new HashSet<>();
 }

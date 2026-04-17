@@ -20,43 +20,39 @@ public class ResourceController {
 
     private final ResourceService resourceService;
 
-    // GET /api/resources — all authenticated users
     @GetMapping
     public ResponseEntity<List<ResourceDTO>> getAllResources() {
         return ResponseEntity.ok(resourceService.getAllResources());
     }
 
-    // GET /api/resources/search?type=LAB&status=ACTIVE&location=Block+A&minCapacity=20
     @GetMapping("/search")
     public ResponseEntity<List<ResourceDTO>> searchResources(
             @RequestParam(required = false) ResourceType type,
             @RequestParam(required = false) ResourceStatus status,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) Integer minCapacity) {
-        return ResponseEntity.ok(resourceService.searchResources(type, status, location, minCapacity));
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) List<Long> assetIds,
+            @RequestParam(required = false) List<Long> amenityIds) {
+        return ResponseEntity.ok(resourceService.searchResources(type, status, location, minCapacity, assetIds, amenityIds));
     }
 
-    // GET /api/resources/{id}
     @GetMapping("/{id}")
     public ResponseEntity<ResourceDTO> getResourceById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getResourceById(id));
     }
 
-    // POST /api/resources — admin only
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResourceDTO> createResource(@Valid @RequestBody ResourceDTO resourceDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(resourceService.createResource(resourceDTO));
     }
 
-    // PUT /api/resources/{id} — admin only
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResourceDTO> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceDTO resourceDTO) {
         return ResponseEntity.ok(resourceService.updateResource(id, resourceDTO));
     }
 
-    // DELETE /api/resources/{id} — admin only
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteResource(@PathVariable Long id) {

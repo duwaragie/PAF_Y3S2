@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { resourceService, type ResourceDTO, type ResourceSearchParams } from '@/services/resourceService';
+import { assetService, type AssetDTO } from '@/services/assetService';
+import { amenityService, type AmenityDTO } from '@/services/amenityService';
 
 const TYPES = ['LECTURE_HALL', 'LAB', 'MEETING_ROOM', 'EQUIPMENT'] as const;
 const STATUSES = ['ACTIVE', 'OUT_OF_SERVICE', 'UNDER_MAINTENANCE'] as const;
@@ -24,7 +26,9 @@ type FormState = {
   capacity: string;
   location: string;
   availabilityWindows: string;
-  status: ResourceDTO['status']
+  status: ResourceDTO['status'];
+  assetIds: number[];
+  amenityIds: number[];
 };
 
 const emptyForm: FormState = {
@@ -33,13 +37,17 @@ const emptyForm: FormState = {
   capacity: '',
   location: '',
   availabilityWindows: '',
-  status: 'ACTIVE'
+  status: 'ACTIVE',
+  assetIds: [],
+  amenityIds: [],
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export default function FacilitiesPage() {
   const [resources, setResources] = useState<ResourceDTO[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<AssetDTO[]>([]);
+  const [availableAmenities, setAvailableAmenities] = useState<AmenityDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -75,6 +83,22 @@ export default function FacilitiesPage() {
     void run();
   }, [searchParams]);
 
+  useEffect(() => {
+    const loadCatalogues = async () => {
+      try {
+        const [resAssets, resAmenities] = await Promise.all([
+          assetService.getAll().catch(() => ({ data: [] })),
+          amenityService.getAll().catch(() => ({ data: [] })),
+        ]);
+        setAvailableAssets(resAssets.data);
+        setAvailableAmenities(resAmenities.data);
+      } catch {
+        // non-blocking — form still works without catalogues
+      }
+    };
+    void loadCatalogues();
+  }, []);
+
   const resetFilters = () => setSearchParams({});
 
   const clearMessages = () => { setError(null); setSuccess(null); };
@@ -95,11 +119,31 @@ export default function FacilitiesPage() {
       location: r.location || '',
       availabilityWindows: r.availabilityWindows || '',
       status: r.status,
+      assetIds: r.assetIds || [],
+      amenityIds: r.amenityIds || [],
     });
     setFormErrors({});
     setEditingId(r.id);
     setShowForm(true);
     clearMessages();
+  };
+
+  const toggleAsset = (id: number) => {
+    setForm((prev) => ({
+      ...prev,
+      assetIds: prev.assetIds.includes(id)
+        ? prev.assetIds.filter((a) => a !== id)
+        : [...prev.assetIds, id],
+    }));
+  };
+
+  const toggleAmenity = (id: number) => {
+    setForm((prev) => ({
+      ...prev,
+      amenityIds: prev.amenityIds.includes(id)
+        ? prev.amenityIds.filter((a) => a !== id)
+        : [...prev.amenityIds, id],
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -126,6 +170,8 @@ export default function FacilitiesPage() {
         location: form.location.trim(),
         availabilityWindows: form.availabilityWindows.trim(),
         status: form.status,
+        assetIds: form.assetIds,
+        amenityIds: form.amenityIds,
       };
       if (editingId) {
         const res = await resourceService.update(editingId, payload);
@@ -347,6 +393,47 @@ export default function FacilitiesPage() {
                     </select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <label className="text-sm font-semibold text-gray-800 mb-3 block">Assets</label>
+                    {availableAssets.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {availableAssets.map((a) => (
+                          <label key={a.id} className="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-gray-200">
+                            <input type="checkbox" className="mt-1 rounded text-campus-600 focus:ring-campus-500" checked={form.assetIds.includes(a.id)} onChange={() => toggleAsset(a.id)} />
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">{a.name}</p>
+                              {a.description && <p className="text-[10px] text-gray-400 truncate w-32" title={a.description}>{a.description}</p>}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">No assets in the catalogue. Add them in Manage Assets first.</p>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <label className="text-sm font-semibold text-gray-800 mb-3 block">Amenities</label>
+                    {availableAmenities.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {availableAmenities.map((a) => (
+                          <label key={a.id} className="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-gray-200">
+                            <input type="checkbox" className="mt-1 rounded text-campus-600 focus:ring-campus-500" checked={form.amenityIds.includes(a.id)} onChange={() => toggleAmenity(a.id)} />
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">{a.name}</p>
+                              {a.description && <p className="text-[10px] text-gray-400 truncate w-32" title={a.description}>{a.description}</p>}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">No amenities in the catalogue. Add them in Manage Amenities first.</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button type="submit" disabled={saving} className="h-11 px-6 bg-campus-800 text-white text-sm font-semibold rounded-xl hover:bg-campus-700 disabled:opacity-60 transition-colors">
                     {saving ? 'Saving...' : editingId ? 'Update Facility' : 'Create Facility'}
@@ -368,7 +455,7 @@ export default function FacilitiesPage() {
                   <table className="w-full text-left">
                     <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/50">
-                      {['Name', 'Type', 'Capacity', 'Location', 'Availability', 'Status', 'Actions'].map((h) => (
+                      {['Name', 'Type', 'Features', 'Capacity', 'Location', 'Availability', 'Status', 'Actions'].map((h) => (
                           <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -382,6 +469,19 @@ export default function FacilitiesPage() {
                           {typeLabels[r.type] || r.type}
                         </span>
                           </td>
+                          <td className="px-5 py-4">
+                            <div className="flex flex-wrap gap-1.5 max-w-[180px]">
+                              {r.assetIds && r.assetIds.length > 0 && (
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded">{r.assetIds.length} Assets</span>
+                              )}
+                              {r.amenityIds && r.amenityIds.length > 0 && (
+                                <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded">{r.amenityIds.length} Amenities</span>
+                              )}
+                              {(!r.assetIds?.length && !r.amenityIds?.length) && (
+                                <span className="text-[11px] text-gray-400 italic">—</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-5 py-4 text-sm text-gray-600">
                             {r.capacity ? <span className="font-semibold">{r.capacity} pax</span> : <span className="text-gray-400">—</span>}
                           </td>
@@ -393,7 +493,7 @@ export default function FacilitiesPage() {
                         </span>
                           </td>
                           <td className="px-5 py-4">
-                            <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-3">
                               <button onClick={() => openEdit(r)} className="text-sm font-semibold text-campus-600 hover:text-campus-800 transition-colors">Edit</button>
                               <button onClick={() => setDeleteConfirm(r)} className="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors">Delete</button>
                             </div>
@@ -402,7 +502,7 @@ export default function FacilitiesPage() {
                     ))}
                     {resources.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-5 py-16 text-center">
+                          <td colSpan={8} className="px-5 py-16 text-center">
                             <div className="flex flex-col items-center justify-center">
                               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
                                 <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
