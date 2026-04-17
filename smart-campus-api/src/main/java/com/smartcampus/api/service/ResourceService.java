@@ -5,17 +5,26 @@ import com.smartcampus.api.exception.ResourceNotFoundException;
 import com.smartcampus.api.model.Resource;
 import com.smartcampus.api.model.ResourceStatus;
 import com.smartcampus.api.model.ResourceType;
+import com.smartcampus.api.model.Asset;
+import com.smartcampus.api.model.Amenity;
 import com.smartcampus.api.repository.ResourceRepository;
+import com.smartcampus.api.repository.AssetRepository;
+import com.smartcampus.api.repository.AmenityRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
+    private final AssetRepository assetRepository;
+    private final AmenityRepository amenityRepository;
 
     public List<ResourceDTO> getAllResources() {
         return resourceRepository.findAll().stream().map(this::convertToDTO).toList();
@@ -40,7 +49,10 @@ public class ResourceService {
         resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(dto.getAvailabilityWindows());
         resource.setStatus(dto.getStatus());
-        resource.setImageUrl(dto.getImageUrl()); // Set the image URL
+        resource.setImageUrl(dto.getImageUrl());
+        
+        mapIdsToEntities(dto, resource);
+        
         return convertToDTO(resourceRepository.save(resource));
     }
 
@@ -53,7 +65,10 @@ public class ResourceService {
         resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(dto.getAvailabilityWindows());
         resource.setStatus(dto.getStatus());
-        resource.setImageUrl(dto.getImageUrl()); // Update the image URL
+        resource.setImageUrl(dto.getImageUrl());
+        
+        mapIdsToEntities(dto, resource);
+        
         return convertToDTO(resourceRepository.save(resource));
     }
 
@@ -64,7 +79,37 @@ public class ResourceService {
         resourceRepository.deleteById(id);
     }
 
+    private void mapIdsToEntities(ResourceDTO dto, Resource resource) {
+        if (dto.getAssetIds() != null && !dto.getAssetIds().isEmpty()) {
+            Set<Asset> assets = dto.getAssetIds().stream()
+                    .map(assetId -> assetRepository.findById(assetId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Asset not found with id: " + assetId)))
+                    .collect(Collectors.toSet());
+            resource.setAssets(assets);
+        } else {
+            resource.getAssets().clear();
+        }
+
+        if (dto.getAmenityIds() != null && !dto.getAmenityIds().isEmpty()) {
+            Set<Amenity> amenities = dto.getAmenityIds().stream()
+                    .map(amenityId -> amenityRepository.findById(amenityId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Amenity not found with id: " + amenityId)))
+                    .collect(Collectors.toSet());
+            resource.setAmenities(amenities);
+        } else {
+            resource.getAmenities().clear();
+        }
+    }
+
     private ResourceDTO convertToDTO(Resource resource) {
+        List<Long> assetIds = resource.getAssets() != null 
+            ? resource.getAssets().stream().map(Asset::getId).toList() 
+            : new ArrayList<>();
+            
+        List<Long> amenityIds = resource.getAmenities() != null 
+            ? resource.getAmenities().stream().map(Amenity::getId).toList() 
+            : new ArrayList<>();
+
         return new ResourceDTO(
                 resource.getId(),
                 resource.getName(),
@@ -73,7 +118,9 @@ public class ResourceService {
                 resource.getLocation(),
                 resource.getAvailabilityWindows(),
                 resource.getStatus(),
-                resource.getImageUrl() // Include image URL in the response
+                resource.getImageUrl(),
+                assetIds,
+                amenityIds
         );
     }
 }
