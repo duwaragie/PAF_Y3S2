@@ -45,7 +45,6 @@ export default function FacilitiesPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [searchParams, setSearchParams] = useState<ResourceSearchParams>({});
-  const [isSearching, setIsSearching] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -55,45 +54,28 @@ export default function FacilitiesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<ResourceDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { void loadResources(); }, []);
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const cleanParams = Object.fromEntries(
+            Object.entries(searchParams).filter(([, v]) => v !== '' && v != null)
+        );
+        const res = Object.keys(cleanParams).length > 0
+            ? await resourceService.search(cleanParams)
+            : await resourceService.getAll();
+        setResources(res.data);
+      } catch {
+        setError('Failed to load resources.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void run();
+  }, [searchParams]);
 
-  const loadResources = async () => {
-    try {
-      setIsLoading(true);
-      const res = await resourceService.getAll();
-      setResources(res.data);
-    } catch {
-      setError('Failed to load resources.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      setIsSearching(true);
-      setError(null);
-      const cleanParams = Object.fromEntries(
-          Object.entries(searchParams).filter(([, v]) => v !== '' && v != null)
-      );
-
-      const res = Object.keys(cleanParams).length > 0
-          ? await resourceService.search(cleanParams)
-          : await resourceService.getAll();
-
-      setResources(res.data);
-    } catch {
-      setError('Failed to search resources.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const resetFilters = () => {
-    setSearchParams({});
-    void loadResources();
-  };
+  const resetFilters = () => setSearchParams({});
 
   const clearMessages = () => { setError(null); setSuccess(null); };
 
@@ -209,7 +191,7 @@ export default function FacilitiesPage() {
 
           {/* Filter Bar */}
           <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-wrap items-end gap-4">
               <div className="flex-1 min-w-[150px]">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Type</label>
                 <select
@@ -257,29 +239,16 @@ export default function FacilitiesPage() {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <button
-                    type="submit"
-                    disabled={isSearching}
-                    className="h-10 px-5 bg-campus-100 hover:bg-campus-200 text-campus-800 text-sm font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  {isSearching ? 'Searching...' : 'Search'}
-                </button>
-
-                {(Object.keys(searchParams).length > 0) && (
-                    <button
-                        type="button"
-                        onClick={resetFilters}
-                        className="h-10 px-4 border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-semibold rounded-lg transition-colors"
-                    >
-                      Reset
-                    </button>
-                )}
-              </div>
-            </form>
+              {Object.values(searchParams).some((v) => v !== '' && v != null) && (
+                  <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="h-10 px-4 border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Reset
+                  </button>
+              )}
+            </div>
           </div>
 
           {/* Delete Confirmation Modal */}
@@ -399,7 +368,7 @@ export default function FacilitiesPage() {
                   <table className="w-full text-left">
                     <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/50">
-                      {['ID', 'Name', 'Type', 'Capacity', 'Location', 'Availability', 'Status', 'Actions'].map((h) => (
+                      {['Name', 'Type', 'Capacity', 'Location', 'Availability', 'Status', 'Actions'].map((h) => (
                           <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -407,7 +376,6 @@ export default function FacilitiesPage() {
                     <tbody>
                     {resources.map((r) => (
                         <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
-                          <td className="px-5 py-4 text-sm font-mono text-gray-500">#{r.id}</td>
                           <td className="px-5 py-4 text-sm font-semibold text-campus-800">{r.name}</td>
                           <td className="px-5 py-4 text-sm text-gray-600">
                         <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600">
@@ -434,7 +402,7 @@ export default function FacilitiesPage() {
                     ))}
                     {resources.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="px-5 py-16 text-center">
+                          <td colSpan={7} className="px-5 py-16 text-center">
                             <div className="flex flex-col items-center justify-center">
                               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
                                 <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
