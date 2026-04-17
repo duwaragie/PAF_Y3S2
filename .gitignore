@@ -11,3 +11,11 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Node (dependencies should only live under smart-campus-ui/)
+/node_modules/
+/package.json
+/package-lock.json
+
+# Build artifacts
+dist/
