@@ -41,6 +41,36 @@ public class EmailService {
         send(toEmail, subject, html);
     }
 
+    public void sendNotificationEmail(String toEmail, String recipientName, String title, String message, String link) {
+        String subject = "Academic Curator – " + (title != null ? title : "Update");
+        String safeName = escapeHtml(recipientName != null ? recipientName : "there");
+        String safeTitle = escapeHtml(title != null ? title : "Notification");
+        String safeMessage = escapeHtml(message != null ? message : "").replace("\n", "<br>");
+
+        StringBuilder body = new StringBuilder();
+        body.append("<p style=\"margin:0 0 16px;color:").append(TEXT).append(";font-size:15px;line-height:1.6;\">")
+            .append("Hi ").append(safeName).append(",</p>");
+        body.append("<p style=\"margin:0 0 24px;color:").append(TEXT_MUTED).append(";font-size:14px;line-height:1.6;\">")
+            .append("You have a new update on Academic Curator.").append("</p>");
+        body.append("<div style=\"background:").append(BG).append(";border-radius:12px;padding:20px;margin:0 0 24px;border-left:3px solid ").append(PRIMARY_LIGHT).append(";\">")
+            .append("<p style=\"margin:0 0 8px;color:").append(PRIMARY).append(";font-size:15px;font-weight:700;\">").append(safeTitle).append("</p>")
+            .append("<p style=\"margin:0;color:").append(TEXT).append(";font-size:14px;line-height:1.6;white-space:pre-line;\">").append(safeMessage).append("</p>")
+            .append("</div>");
+
+        if (link != null && !link.isBlank()) {
+            String safeLink = escapeHtml(link);
+            body.append("<div style=\"text-align:center;margin:0 0 24px;\">")
+                .append("<a href=\"").append(safeLink).append("\" style=\"display:inline-block;background:").append(PRIMARY).append(";color:").append(WHITE).append(";text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:600;\">Open in app</a>")
+                .append("</div>");
+        }
+
+        body.append("<p style=\"margin:0;color:").append(TEXT_MUTED).append(";font-size:12px;line-height:1.5;\">")
+            .append("You can manage your notification preferences from the Notifications page.").append("</p>");
+
+        String html = buildLayout(safeTitle, body.toString());
+        send(toEmail, subject, html);
+    }
+
     public void sendContactEmail(String toEmail, String replyToEmail, String senderName, String subject, String messageBody) {
         String mailSubject = "[Contact] " + subject;
         String safeName = escapeHtml(senderName);

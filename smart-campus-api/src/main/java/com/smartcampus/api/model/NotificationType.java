@@ -1,0 +1,12 @@
+package com.smartcampus.api.model;
+
+public enum NotificationType {
+    ENROLLMENT_CONFIRMED,
+    ENROLLMENT_WAITLISTED,
+    WAITLIST_PROMOTED,
+    ENROLLMENT_WITHDRAWN,
+    GRADE_RELEASED,
+    COURSE_STATUS_CHANGED,
+    ANNOUNCEMENT,
+    GENERAL
+}
