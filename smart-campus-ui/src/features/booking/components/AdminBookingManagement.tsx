@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react';
-import type { BookingDTO } from '@/services/bookingService';
+import type { BookingDTO, BookingStatus } from '@/services/bookingService';
 import { bookingService } from '@/services/bookingService';
 
 type ConfirmAction = { type: 'approve'; booking: BookingDTO } | { type: 'reject'; booking: BookingDTO; reason: string };
+
+const statusStyle: Record<BookingStatus, string> = {
+  PENDING: 'bg-amber-50 text-amber-700 border border-amber-100',
+  APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+  REJECTED: 'bg-red-50 text-red-700 border border-red-100',
+  CANCELLED: 'bg-gray-100 text-gray-600 border border-gray-200',
+};
+
+const STATUS_FILTERS: (BookingStatus | 'ALL')[] = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL'];
 
 export function AdminBookingManagement() {
   const [bookings, setBookings] = useState<BookingDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<BookingStatus | 'ALL'>('PENDING');
   const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>({});
   const [expandedBooking, setExpandedBooking] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
@@ -16,12 +26,14 @@ export function AdminBookingManagement() {
 
   useEffect(() => {
     loadBookings();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStatus]);
 
   const loadBookings = async () => {
     try {
       setLoading(true);
-      const response = await bookingService.getPendingBookings();
+      const status = selectedStatus === 'ALL' ? undefined : selectedStatus;
+      const response = await bookingService.getAllBookings(undefined, undefined, status, 0, 100);
       setBookings(response.data.content);
       setError(null);
     } catch (err) {
@@ -80,11 +92,21 @@ export function AdminBookingManagement() {
     }
   };
 
+  const headerTitle: Record<BookingStatus | 'ALL', string> = {
+    PENDING: 'Pending Booking Requests',
+    APPROVED: 'Approved Bookings',
+    REJECTED: 'Rejected Bookings',
+    CANCELLED: 'Cancelled Bookings',
+    ALL: 'All Bookings',
+  };
+
   return (
     <div className="w-full space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-campus-900">Pending Booking Requests</h2>
-        <p className="text-sm text-gray-500 mt-1">Total pending: {bookings.length}</p>
+        <h2 className="text-lg font-bold text-campus-900">{headerTitle[selectedStatus]}</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          {selectedStatus === 'ALL' ? 'Showing all booking records.' : `Showing ${bookings.length} record${bookings.length === 1 ? '' : 's'}.`}
+        </p>
       </div>
 
       {error && (
@@ -103,6 +125,23 @@ export function AdminBookingManagement() {
           {success}
         </div>
       )}
+
+      <div className="flex gap-2 flex-wrap">
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setSelectedStatus(s)}
+            className={`h-9 px-4 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${
+              selectedStatus === s
+                ? 'bg-campus-800 text-white'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
+          </button>
+        ))}
+      </div>
 
       {confirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -170,22 +209,26 @@ export function AdminBookingManagement() {
         </div>
       ) : bookings.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center shadow-sm">
-          <p className="text-sm font-semibold text-gray-900">No pending bookings</p>
-          <p className="text-xs text-gray-500 mt-1">New requests will appear here.</p>
+          <p className="text-sm font-semibold text-gray-900">
+            {selectedStatus === 'PENDING' ? 'No pending bookings' : `No ${selectedStatus === 'ALL' ? '' : selectedStatus.toLowerCase() + ' '}bookings to show`}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {selectedStatus === 'PENDING' ? 'New requests will appear here.' : 'Try another status filter.'}
+          </p>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {bookings.map((booking) => (
             <div key={booking.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div className="flex justify-between items-start gap-4 mb-3">
-                <div>
-                  <p className="font-semibold text-campus-800">{booking.resourceName}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                <div className="min-w-0">
+                  <p className="font-semibold text-campus-800 truncate">{booking.resourceName}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
                     Requested by <span className="font-medium">{booking.userName}</span> ({booking.userEmail})
                   </p>
                 </div>
-                <span className="px-2.5 py-1 text-[10px] font-bold rounded-md bg-amber-50 text-amber-700 border border-amber-100 shrink-0">
-                  PENDING
+                <span className={`px-2.5 py-1 text-[10px] font-bold rounded-md shrink-0 ${statusStyle[booking.status]}`}>
+                  {booking.status}
                 </span>
               </div>
 
@@ -219,48 +262,73 @@ export function AdminBookingManagement() {
                 <p className="text-sm text-gray-700">{booking.purpose}</p>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-                <button
-                  onClick={() => askApprove(booking)}
-                  className="h-10 px-5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                >
-                  Approve
-                </button>
-                <button
-                  onClick={() =>
-                    setExpandedBooking(expandedBooking === booking.id ? null : booking.id)
-                  }
-                  className="h-10 px-5 border border-gray-200 text-sm font-semibold text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  {expandedBooking === booking.id ? 'Hide' : 'Reject'}
-                </button>
-              </div>
-
-              {expandedBooking === booking.id && (
-                <div className="mt-4 p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block" htmlFor={`reason-${booking.id}`}>
-                      Rejection Reason <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      id={`reason-${booking.id}`}
-                      placeholder="Explain why this request is being rejected"
-                      value={rejectionReasons[booking.id] || ''}
-                      onChange={(e) =>
-                        setRejectionReasons((prev) => ({ ...prev, [booking.id]: e.target.value }))
-                      }
-                      minLength={5}
-                      maxLength={500}
-                      className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-campus-200"
-                    />
-                  </div>
-                  <button
-                    onClick={() => askReject(booking)}
-                    className="w-full h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
-                  >
-                    Confirm Rejection
-                  </button>
+              {booking.rejectionReason && (
+                <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-100">
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-0.5">Rejection Reason</p>
+                  <p className="text-sm text-red-700">{booking.rejectionReason}</p>
                 </div>
+              )}
+
+              {(booking.approvedByName || booking.cancelledAt) && (
+                <div className="mt-3 text-[11px] text-gray-500">
+                  {booking.status === 'APPROVED' && booking.approvedAt && (
+                    <p>Approved by <span className="font-semibold text-gray-700">{booking.approvedByName}</span> · {new Date(booking.approvedAt).toLocaleString()}</p>
+                  )}
+                  {booking.status === 'REJECTED' && booking.approvedAt && (
+                    <p>Rejected by <span className="font-semibold text-gray-700">{booking.approvedByName}</span> · {new Date(booking.approvedAt).toLocaleString()}</p>
+                  )}
+                  {booking.status === 'CANCELLED' && booking.cancelledAt && (
+                    <p>Cancelled · {new Date(booking.cancelledAt).toLocaleString()}</p>
+                  )}
+                </div>
+              )}
+
+              {booking.status === 'PENDING' && (
+                <>
+                  <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => askApprove(booking)}
+                      className="h-10 px-5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() =>
+                        setExpandedBooking(expandedBooking === booking.id ? null : booking.id)
+                      }
+                      className="h-10 px-5 border border-gray-200 text-sm font-semibold text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      {expandedBooking === booking.id ? 'Hide' : 'Reject'}
+                    </button>
+                  </div>
+
+                  {expandedBooking === booking.id && (
+                    <div className="mt-4 p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block" htmlFor={`reason-${booking.id}`}>
+                          Rejection Reason <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          id={`reason-${booking.id}`}
+                          placeholder="Explain why this request is being rejected"
+                          value={rejectionReasons[booking.id] || ''}
+                          onChange={(e) =>
+                            setRejectionReasons((prev) => ({ ...prev, [booking.id]: e.target.value }))
+                          }
+                          minLength={5}
+                          maxLength={500}
+                          className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-campus-200"
+                        />
+                      </div>
+                      <button
+                        onClick={() => askReject(booking)}
+                        className="w-full h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                      >
+                        Confirm Rejection
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}

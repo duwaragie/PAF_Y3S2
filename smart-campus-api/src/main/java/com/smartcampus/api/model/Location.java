@@ -33,6 +33,6 @@ public class Location {
     private String roomType; // e.g., NORMAL, AC, LAB
 
     public String getDisplayName() {
-        return block + " - Floor " + floor + " - Room " + roomNumber + " (" + roomType + ")";
+        return block + " · Floor " + floor + " · Room " + roomNumber;
     }
 }
