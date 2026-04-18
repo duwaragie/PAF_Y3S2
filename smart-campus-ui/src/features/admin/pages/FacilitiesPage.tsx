@@ -54,7 +54,6 @@ export default function FacilitiesPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [searchParams, setSearchParams] = useState<ResourceSearchParams>({});
-  const [isSearching, setIsSearching] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);

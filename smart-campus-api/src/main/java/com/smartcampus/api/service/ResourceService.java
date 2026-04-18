@@ -86,7 +86,7 @@ public class ResourceService {
         return convertToDTO(resourceRepository.save(resource));
     }
 
-   o
+    @Transactional
     public void deleteResource(Long id) {
         if (!resourceRepository.existsById(id)) {
             throw new ResourceNotFoundException("Resource not found with id: " + id);
