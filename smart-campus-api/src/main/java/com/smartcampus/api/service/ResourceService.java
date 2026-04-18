@@ -7,9 +7,11 @@ import com.smartcampus.api.model.ResourceStatus;
 import com.smartcampus.api.model.ResourceType;
 import com.smartcampus.api.model.Asset;
 import com.smartcampus.api.model.Amenity;
+import com.smartcampus.api.model.Location;
 import com.smartcampus.api.repository.ResourceRepository;
 import com.smartcampus.api.repository.AssetRepository;
 import com.smartcampus.api.repository.AmenityRepository;
+import com.smartcampus.api.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ public class ResourceService {
     private final ResourceRepository resourceRepository;
     private final AssetRepository assetRepository;
     private final AmenityRepository amenityRepository;
+    private final LocationRepository locationRepository;
 
     @Transactional(readOnly = true)
     public List<ResourceDTO> getAllResources() {
@@ -34,7 +37,7 @@ public class ResourceService {
     }
 
     @Transactional(readOnly = true)
-    public List<ResourceDTO> searchResources(ResourceType type, ResourceStatus status, String location, Integer minCapacity, List<Long> assetIds, List<Long> amenityIds) {
+    public List<ResourceDTO> searchResources(ResourceType type, ResourceStatus status, Long locationId, Integer minCapacity, List<Long> assetIds, List<Long> amenityIds) {
         Long assetCount = (assetIds != null && !assetIds.isEmpty()) ? (long) assetIds.size() : null;
         Long amenityCount = (amenityIds != null && !amenityIds.isEmpty()) ? (long) amenityIds.size() : null;
         
@@ -42,7 +45,7 @@ public class ResourceService {
         List<Long> finalAssetIds = (assetIds != null && assetIds.isEmpty()) ? null : assetIds;
         List<Long> finalAmenityIds = (amenityIds != null && amenityIds.isEmpty()) ? null : amenityIds;
         
-        return resourceRepository.searchResources(type, status, location, minCapacity, finalAssetIds, assetCount, finalAmenityIds, amenityCount)
+        return resourceRepository.searchResources(type, status, locationId, minCapacity, finalAssetIds, assetCount, finalAmenityIds, amenityCount)
                 .stream().map(this::convertToDTO).toList();
     }
 
@@ -59,10 +62,15 @@ public class ResourceService {
         resource.setName(dto.getName());
         resource.setType(dto.getType());
         resource.setCapacity(dto.getCapacity());
-        resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(dto.getAvailabilityWindows());
         resource.setStatus(dto.getStatus());
         resource.setImageUrl(dto.getImageUrl());
+        
+        if (dto.getLocationId() != null) {
+            Location location = locationRepository.findById(dto.getLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + dto.getLocationId()));
+            resource.setLocation(location);
+        }
         
         mapIdsToEntities(dto, resource);
         
@@ -76,10 +84,17 @@ public class ResourceService {
         resource.setName(dto.getName());
         resource.setType(dto.getType());
         resource.setCapacity(dto.getCapacity());
-        resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(dto.getAvailabilityWindows());
         resource.setStatus(dto.getStatus());
         resource.setImageUrl(dto.getImageUrl());
+        
+        if (dto.getLocationId() != null) {
+            Location location = locationRepository.findById(dto.getLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + dto.getLocationId()));
+            resource.setLocation(location);
+        } else {
+            resource.setLocation(null);
+        }
         
         mapIdsToEntities(dto, resource);
         
@@ -130,7 +145,8 @@ public class ResourceService {
                 resource.getName(),
                 resource.getType(),
                 resource.getCapacity(),
-                resource.getLocation(),
+                resource.getLocation() != null ? resource.getLocation().getId() : null,
+                resource.getLocation() != null ? resource.getLocation().getDisplayName() : null,
                 resource.getAvailabilityWindows(),
                 resource.getStatus(),
                 resource.getImageUrl(),

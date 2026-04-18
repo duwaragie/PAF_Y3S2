@@ -29,11 +29,11 @@ public class ResourceController {
     public ResponseEntity<List<ResourceDTO>> searchResources(
             @RequestParam(required = false) ResourceType type,
             @RequestParam(required = false) ResourceStatus status,
-            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Long locationId,
             @RequestParam(required = false) Integer minCapacity,
             @RequestParam(required = false) List<Long> assetIds,
             @RequestParam(required = false) List<Long> amenityIds) {
-        return ResponseEntity.ok(resourceService.searchResources(type, status, location, minCapacity, assetIds, amenityIds));
+        return ResponseEntity.ok(resourceService.searchResources(type, status, locationId, minCapacity, assetIds, amenityIds));
     }
 
     @GetMapping("/{id}")
