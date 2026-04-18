@@ -5,7 +5,8 @@ export interface ResourceDTO {
   name: string;
   type: 'LECTURE_HALL' | 'LAB' | 'MEETING_ROOM' | 'EQUIPMENT';
   capacity: number | null;
-  location: string;
+  locationId: number | null;
+  locationName?: string;
   availabilityWindows: string;
   status: 'ACTIVE' | 'OUT_OF_SERVICE' | 'UNDER_MAINTENANCE';
   imageUrl?: string;
@@ -16,7 +17,7 @@ export interface ResourceDTO {
 export interface ResourceSearchParams {
   type?: string;
   status?: string;
-  location?: string;
+  locationId?: number;
   minCapacity?: number;
   assetIds?: number[];
   amenityIds?: number[];
@@ -32,10 +33,10 @@ export const resourceService = {
   getById: (id: number) =>
     api.get<ResourceDTO>(`/resources/${id}`),
 
-  create: (data: Omit<ResourceDTO, 'id'>) =>
+  create: (data: Omit<ResourceDTO, 'id' | 'locationName'>) =>
     api.post<ResourceDTO>('/resources', data),
 
-  update: (id: number, data: Omit<ResourceDTO, 'id'>) =>
+  update: (id: number, data: Omit<ResourceDTO, 'id' | 'locationName'>) =>
     api.put<ResourceDTO>(`/resources/${id}`, data),
 
   delete: (id: number) =>
