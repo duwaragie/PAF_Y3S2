@@ -1,12 +1,15 @@
 import { CreateBookingForm } from '../components/CreateBookingForm';
 import { MyBookingsList } from '../components/MyBookingsList';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import type { BookingDTO } from '@/services/bookingService';
 
 export function BookingPage() {
   const [refreshList, setRefreshList] = useState(0);
   const [editingBooking, setEditingBooking] = useState<BookingDTO | null>(null);
+  const [searchParams] = useSearchParams();
+  const preselectedResourceId = Number(searchParams.get('resourceId')) || undefined;
 
   const handleSuccess = () => {
     setEditingBooking(null);
@@ -23,8 +26,9 @@ export function BookingPage() {
 
         <div className="grid grid-cols-1 gap-6">
           <CreateBookingForm
-            key={editingBooking?.id ?? 'new'}
+            key={editingBooking?.id ?? `new-${preselectedResourceId ?? ''}`}
             editingBooking={editingBooking ?? undefined}
+            resourceId={preselectedResourceId}
             onSuccess={handleSuccess}
             onCancel={() => setEditingBooking(null)}
           />

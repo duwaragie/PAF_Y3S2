@@ -3,6 +3,16 @@ import AppLayout from '@/components/layout/AppLayout';
 import { resourceService, type ResourceDTO, type ResourceSearchParams } from '@/services/resourceService';
 import { assetService, type AssetDTO } from '@/services/assetService';
 import { amenityService, type AmenityDTO } from '@/services/amenityService';
+import { locationService, type LocationDTO } from '@/services/locationService';
+import { FacilityDetailModal } from '@/features/facilities/components/FacilityDetailModal';
+import { formatAvailabilitySummary } from '@/utils/scheduleUtils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const TYPES = ['LECTURE_HALL', 'LAB', 'MEETING_ROOM', 'EQUIPMENT'] as const;
 
@@ -17,10 +27,14 @@ export default function FacilitiesCataloguePage() {
   const [resources, setResources] = useState<ResourceDTO[]>([]);
   const [availableAssets, setAvailableAssets] = useState<AssetDTO[]>([]);
   const [availableAmenities, setAvailableAmenities] = useState<AmenityDTO[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<LocationDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [searchParams, setSearchParams] = useState<ResourceSearchParams>({ status: 'ACTIVE' });
+
+  // Modal State
+  const [selectedFacility, setSelectedFacility] = useState<ResourceDTO | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -49,12 +63,14 @@ export default function FacilitiesCataloguePage() {
   useEffect(() => {
     const loadCatalogues = async () => {
       try {
-        const [resAssets, resAmenities] = await Promise.all([
+        const [resAssets, resAmenities, resLocations] = await Promise.all([
           assetService.getAll().catch(() => ({ data: [] })),
           amenityService.getAll().catch(() => ({ data: [] })),
+          locationService.getAll().catch(() => ({ data: [] })),
         ]);
         setAvailableAssets(resAssets.data);
         setAvailableAmenities(resAmenities.data);
+        setAvailableLocations(resLocations.data);
       } catch {
         // non-blocking
       }
@@ -63,7 +79,7 @@ export default function FacilitiesCataloguePage() {
   }, []);
 
   const resetFilters = () => setSearchParams({ status: 'ACTIVE' });
-  const hasExtraFilters = (['type', 'location', 'minCapacity', 'assetIds', 'amenityIds'] as const).some(
+  const hasExtraFilters = (['type', 'locationId', 'minCapacity', 'assetIds', 'amenityIds'] as const).some(
     (k) => {
       const v = searchParams[k];
       if (Array.isArray(v)) return v.length > 0;
@@ -122,13 +138,16 @@ export default function FacilitiesCataloguePage() {
             
             <div className="flex-1 min-w-[150px]">
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Location</label>
-              <input 
-                type="text"
-                placeholder="e.g. Block A"
-                value={searchParams.location || ''} 
-                onChange={(e) => setSearchParams({...searchParams, location: e.target.value})}
-                className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors placeholder:text-gray-400"
-              />
+              <select
+                  value={searchParams.locationId || ''}
+                  onChange={(e) => setSearchParams({...searchParams, locationId: e.target.value ? Number(e.target.value) : undefined})}
+                  className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors"
+              >
+                <option value="">All Locations</option>
+                {availableLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.displayName}</option>
+                ))}
+              </select>
             </div>
 
             <div className="w-[120px]">
@@ -206,35 +225,74 @@ export default function FacilitiesCataloguePage() {
             <div className="w-10 h-10 border-[3px] border-gray-200 border-t-campus-600 rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm animate-slide-up">
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
-                    {['Name', 'Type', 'Capacity', 'Location', 'Availability'].map((h) => (
-                      <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
+              <Table>
+                <TableHeader className="bg-gray-50/50 rounded-t-2xl">
+                  <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                    {['Name', 'Type', 'Capacity', 'Location', 'Features', 'Availability'].map((h) => (
+                      <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider h-auto">
+                        {h}
+                      </th>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {resources.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-4 text-sm font-semibold text-campus-800">{r.name}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600">
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600">
-                          {typeLabels[r.type] || r.type}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-gray-600">
-                        {r.capacity ? <span className="font-semibold">{r.capacity} pax</span> : <span className="text-gray-400">—</span>}
-                      </td>
-                      <td className="px-5 py-4 text-sm text-gray-600">{r.location || '—'}</td>
-                      <td className="px-5 py-4 text-sm text-gray-500">{r.availabilityWindows || '—'}</td>
-                    </tr>
-                  ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {resources.map((r) => {
+                    const rAssets = availableAssets.filter((a) => r.assetIds?.includes(a.id));
+                    const rAmenities = availableAmenities.filter((a) => r.amenityIds?.includes(a.id));
+                    const chips = [...rAssets, ...rAmenities];
+                    const visibleChips = chips.slice(0, 3);
+                    const extraCount = chips.length - visibleChips.length;
+                    return (
+                      <tr
+                        key={r.id}
+                        onClick={() => setSelectedFacility(r)}
+                        className="border-b border-gray-50 hover:bg-campus-50/50 transition-colors cursor-pointer group"
+                      >
+                        <td className="px-5 py-4 text-sm font-semibold text-campus-800 group-hover:text-campus-900">{r.name}</td>
+                        <td className="px-5 py-4 text-sm text-gray-600">
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600">
+                            {typeLabels[r.type] || r.type}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-600">
+                          {r.capacity ? <span className="font-semibold">{r.capacity} pax</span> : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-600">{r.locationName || '—'}</td>
+                        <td className="px-5 py-4 text-sm text-gray-600 max-w-[220px]">
+                          {chips.length === 0 ? (
+                            <span className="text-gray-400">—</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {visibleChips.map((c) => {
+                                const isAsset = rAssets.some((a) => a.id === c.id);
+                                return (
+                                  <span
+                                    key={`${isAsset ? 'a' : 'm'}-${c.id}`}
+                                    className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${isAsset ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}
+                                  >
+                                    {c.name}
+                                  </span>
+                                );
+                              })}
+                              {extraCount > 0 && (
+                                <span className="px-2 py-0.5 text-[10px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 rounded-full">
+                                  +{extraCount}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-[11px] text-gray-600 whitespace-pre-wrap max-w-[200px]">
+                          {formatAvailabilitySummary(r.availabilities)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {resources.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-16 text-center">
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6} className="px-5 py-16 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
                             <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
@@ -242,11 +300,11 @@ export default function FacilitiesCataloguePage() {
                           <p className="text-sm font-semibold text-gray-900 mb-1">No facilities found</p>
                           <p className="text-xs text-gray-500">Adjust your search filters to find resources.</p>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
             {resources.length > 0 && (
               <div className="px-5 py-3 bg-gray-50/80 border-t border-gray-100 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -255,6 +313,15 @@ export default function FacilitiesCataloguePage() {
             )}
           </div>
         )}
+
+        <FacilityDetailModal 
+          isOpen={!!selectedFacility}
+          onClose={() => setSelectedFacility(null)}
+          resource={selectedFacility}
+          mode="view"
+          availableAssets={availableAssets}
+          availableAmenities={availableAmenities}
+        />
       </div>
     </AppLayout>
   );

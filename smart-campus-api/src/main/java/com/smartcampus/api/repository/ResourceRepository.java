@@ -18,7 +18,7 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
            "LEFT JOIN r.amenities am " +
            "WHERE (:type IS NULL OR r.type = :type) " +
            "AND (:status IS NULL OR r.status = :status) " +
-           "AND (:location IS NULL OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:location AS string), '%'))) " +
+           "AND (:locationId IS NULL OR r.location.id = :locationId) " +
            "AND (:minCapacity IS NULL OR r.capacity >= :minCapacity) " +
            "AND (:assetIds IS NULL OR a.id IN :assetIds) " +
            "AND (:amenityIds IS NULL OR am.id IN :amenityIds) " +
@@ -28,7 +28,7 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
     List<Resource> searchResources(
             @Param("type") ResourceType type,
             @Param("status") ResourceStatus status,
-            @Param("location") String location,
+            @Param("locationId") Long locationId,
             @Param("minCapacity") Integer minCapacity,
             @Param("assetIds") List<Long> assetIds,
             @Param("assetIdCount") Long assetIdCount,

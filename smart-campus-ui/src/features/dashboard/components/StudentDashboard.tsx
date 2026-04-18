@@ -1,19 +1,56 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { bookingService, type BookingDTO } from '@/services/bookingService';
 
 export default function StudentDashboard() {
   const user = useAuthStore((s) => s.user);
+  const [bookings, setBookings] = useState<BookingDTO[]>([]);
+
+  useEffect(() => {
+    // Pull a larger page so we can split by status client-side for dashboard stats.
+    bookingService.getMyBookings(undefined, 0, 100)
+      .then((res) => setBookings(res.data.content))
+      .catch(() => setBookings([]));
+  }, []);
+
+  const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'PENDING').length, [bookings]);
+  const approvedUpcoming = useMemo(() => {
+    const now = new Date();
+    return bookings
+      .filter((b) => b.status === 'APPROVED' && new Date(b.startTime) > now)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  }, [bookings]);
 
   const stats = [
-    { label: 'My Bookings', value: '0', desc: 'Active reservations for labs and libraries.', color: 'bg-campus-50 text-campus-700' },
-    { label: 'Open Tickets', value: '0', desc: 'Support requests awaiting review.', color: 'bg-amber-50 text-amber-700' },
-    { label: 'Notifications', value: '0', desc: 'New updates from courses and faculty.', color: 'bg-blue-50 text-blue-700' },
+    {
+      label: 'My Bookings',
+      value: String(bookings.length),
+      desc: 'All booking requests you have submitted.',
+      color: 'bg-campus-50 text-campus-700',
+      iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+    },
+    {
+      label: 'Pending Approval',
+      value: String(pendingCount),
+      desc: 'Requests waiting for admin review.',
+      color: 'bg-amber-50 text-amber-700',
+      iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    },
+    {
+      label: 'Upcoming Bookings',
+      value: String(approvedUpcoming.length),
+      desc: 'Approved bookings on your calendar.',
+      color: 'bg-emerald-50 text-emerald-700',
+      iconPath: 'M5 13l4 4L19 7',
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-[1.75rem] font-bold text-campus-900">Welcome back, {user?.name?.split(' ')[0]}</h1>
-        <p className="text-gray-500 text-sm mt-1">Your academic curriculum is up to date. Explore your dashboard to manage bookings, tickets, and more.</p>
+        <p className="text-gray-500 text-sm mt-1">Browse facilities, book spaces, and keep track of your reservations.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -22,9 +59,7 @@ export default function StudentDashboard() {
             <div className="flex items-center justify-between mb-4">
               <div className={`w-10 h-10 rounded-xl ${stat.color} flex items-center justify-center`}>
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  {stat.label === 'My Bookings' && <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />}
-                  {stat.label === 'Open Tickets' && <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>}
-                  {stat.label === 'Notifications' && <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />}
+                  <path strokeLinecap="round" strokeLinejoin="round" d={stat.iconPath} />
                 </svg>
               </div>
               <span className="text-3xl font-extrabold text-campus-900">{stat.value}</span>
@@ -33,6 +68,53 @@ export default function StudentDashboard() {
             <p className="text-xs text-gray-400 mt-0.5">{stat.desc}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-campus-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/facilities" className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 hover:border-campus-200 hover:bg-campus-50/50 transition-all text-center">
+              <div className="w-10 h-10 rounded-xl bg-campus-50 text-campus-700 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
+                </svg>
+              </div>
+              <span className="text-sm font-semibold text-campus-800">Browse Facilities</span>
+            </Link>
+            <Link to="/bookings" className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 hover:border-campus-200 hover:bg-campus-50/50 transition-all text-center">
+              <div className="w-10 h-10 rounded-xl bg-campus-50 text-campus-700 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+                </svg>
+              </div>
+              <span className="text-sm font-semibold text-campus-800">My Bookings</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-campus-900">Upcoming Bookings</h2>
+            <Link to="/bookings" className="text-sm font-semibold text-campus-600 hover:text-campus-500">View All</Link>
+          </div>
+          <div className="space-y-3">
+            {approvedUpcoming.slice(0, 3).map((b) => (
+              <div key={b.id} className="p-3 rounded-xl bg-emerald-50/40 border border-emerald-100">
+                <p className="text-sm font-semibold text-campus-800 truncate">
+                  {b.resourceName}
+                  {b.locationName && <span className="font-normal text-gray-500"> · {b.locationName}</span>}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {new Date(b.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })} – {new Date(b.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            ))}
+            {approvedUpcoming.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No upcoming bookings.</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

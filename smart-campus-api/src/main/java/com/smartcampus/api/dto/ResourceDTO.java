@@ -24,9 +24,9 @@ public class ResourceDTO {
 
     private Integer capacity;
 
-    private String location;
+    private Long locationId;
 
-    private String availabilityWindows;
+    private String locationName;
 
     @NotNull(message = "Status is required")
     private ResourceStatus status;
@@ -36,4 +36,6 @@ public class ResourceDTO {
     private List<Long> assetIds = new ArrayList<>();
     
     private List<Long> amenityIds = new ArrayList<>();
+
+    private List<ResourceAvailabilityDTO> availabilities = new ArrayList<>();
 }

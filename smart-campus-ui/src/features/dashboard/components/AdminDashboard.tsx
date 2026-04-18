@@ -2,26 +2,40 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { adminService, type UserDTO } from '@/services/adminService';
+import { bookingService, type BookingDTO } from '@/services/bookingService';
+import { resourceService, type ResourceDTO } from '@/services/resourceService';
 
 export default function AdminDashboard() {
   const user = useAuthStore((s) => s.user);
   const [users, setUsers] = useState<UserDTO[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<BookingDTO[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [resources, setResources] = useState<ResourceDTO[]>([]);
 
   useEffect(() => {
     adminService.getAllUsers().then((res) => setUsers(res.data)).catch(() => {});
+    bookingService.getPendingBookings(0, 5)
+      .then((res) => {
+        setPendingBookings(res.data.content);
+        setPendingTotal(res.data.totalElements ?? res.data.content.length);
+      })
+      .catch(() => {});
+    resourceService.getAll().then((res) => setResources(res.data)).catch(() => {});
   }, []);
 
+  const activeFacilities = resources.filter((r) => r.status === 'ACTIVE').length;
+
   const stats = [
-    { label: 'Total Users', value: String(users.length || 0), desc: 'Registered accounts across all roles.', color: 'bg-campus-50 text-campus-700' },
-    { label: 'Pending Bookings', value: '0', desc: 'Booking requests awaiting approval.', color: 'bg-amber-50 text-amber-700' },
-    { label: 'Open Incidents', value: '0', desc: 'Active incident tickets.', color: 'bg-red-50 text-red-700' },
-    { label: 'System Health', value: 'OK', desc: 'All services running normally.', color: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Total Users', value: String(users.length), desc: 'Registered accounts across all roles.', color: 'bg-campus-50 text-campus-700' },
+    { label: 'Pending Bookings', value: String(pendingTotal), desc: 'Booking requests awaiting approval.', color: 'bg-amber-50 text-amber-700' },
+    { label: 'Active Facilities', value: `${activeFacilities}/${resources.length}`, desc: 'Facilities currently bookable.', color: 'bg-emerald-50 text-emerald-700' },
+    { label: 'System Health', value: 'OK', desc: 'All services running normally.', color: 'bg-blue-50 text-blue-700' },
   ];
 
   const quickActions = [
     { label: 'Register User', href: '/admin/register-user', icon: 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6m3-3h-6' },
     { label: 'Manage Facilities', href: '/admin/facilities', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z' },
-    { label: 'View Bookings', href: '/admin/bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z' },
+    { label: 'Manage Bookings', href: '/admin/bookings', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z' },
     { label: 'View Incidents', href: '/admin/incidents', icon: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01' },
   ];
 
@@ -78,6 +92,33 @@ export default function AdminDashboard() {
               <span className="text-sm font-semibold text-campus-800">{action.label}</span>
             </Link>
           ))}
+        </div>
+      </div>
+
+      {/* Pending Bookings */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-campus-900">Pending Bookings</h2>
+          <Link to="/admin/bookings" className="text-sm font-semibold text-campus-600 hover:text-campus-500">Review All</Link>
+        </div>
+        <div className="space-y-3">
+          {pendingBookings.map((b) => (
+            <div key={b.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-50/40 border border-amber-100">
+              <div className="min-w-0 pr-3">
+                <p className="text-sm font-semibold text-campus-800 truncate">
+                  {b.resourceName}
+                  {b.locationName && <span className="font-normal text-gray-500"> · {b.locationName}</span>}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {b.userName} · {new Date(b.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                </p>
+              </div>
+              <span className="shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-md bg-amber-100 text-amber-700">PENDING</span>
+            </div>
+          ))}
+          {pendingBookings.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No pending bookings right now.</p>
+          )}
         </div>
       </div>
 

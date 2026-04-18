@@ -43,11 +43,10 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
   const isEditMode = !!editingBooking;
 
   useEffect(() => {
-    if (resourceId && !isEditMode) return;
     resourceService.search({ status: 'ACTIVE' })
       .then((res) => setResources(res.data))
       .catch(() => setResources([]));
-  }, [resourceId, isEditMode]);
+  }, []);
 
   const {
     register,
@@ -78,13 +77,14 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
   );
   const capacityHint = selectedResource?.capacity ?? null;
 
-  // When editing, re-apply the saved resourceId once the async dropdown options land.
+  // When editing or navigating with ?resourceId=, re-apply the value once dropdown options land.
   useEffect(() => {
-    if (!editingBooking) return;
-    if (resources.some((r) => r.id === editingBooking.resourceId)) {
-      setValue('resourceId', editingBooking.resourceId);
+    const target = editingBooking?.resourceId ?? resourceId;
+    if (!target) return;
+    if (resources.some((r) => r.id === target)) {
+      setValue('resourceId', target);
     }
-  }, [resources, editingBooking, setValue]);
+  }, [resources, editingBooking, resourceId, setValue]);
 
   const onSubmit = async (data: BookingFormData) => {
     setLoading(true);
@@ -132,31 +132,32 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {!resourceId && (
-          <div>
-            <label htmlFor="resourceId" className="text-sm font-medium text-gray-700 mb-1 block">
-              Resource <span className="text-red-400">*</span>
-            </label>
-            <select
-              id="resourceId"
-              {...register('resourceId', { valueAsNumber: true })}
-              className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.resourceId ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
-            >
-              <option value="">Select a facility</option>
-              {editingBooking && !resources.some((r) => r.id === editingBooking.resourceId) && (
-                <option value={editingBooking.resourceId}>
-                  {editingBooking.resourceName} (currently unavailable)
-                </option>
-              )}
-              {resources.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} — {r.location}{r.capacity ? ` (${r.capacity} pax)` : ''}
-                </option>
-              ))}
-            </select>
-            {errors.resourceId && <p className="text-xs text-red-500 mt-1 font-medium">{errors.resourceId.message}</p>}
-          </div>
-        )}
+        <div>
+          <label htmlFor="resourceId" className="text-sm font-medium text-gray-700 mb-1 block">
+            Resource <span className="text-red-400">*</span>
+          </label>
+          <select
+            id="resourceId"
+            {...register('resourceId', { valueAsNumber: true })}
+            className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.resourceId ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
+          >
+            <option value="">Select a facility</option>
+            {editingBooking && !resources.some((r) => r.id === editingBooking.resourceId) && (
+              <option value={editingBooking.resourceId}>
+                {editingBooking.resourceName} (currently unavailable)
+              </option>
+            )}
+            {resources.map((r) => {
+              const parts = [r.name];
+              if (r.locationName) parts.push(r.locationName);
+              if (r.capacity) parts.push(`${r.capacity} pax`);
+              return (
+                <option key={r.id} value={r.id}>{parts.join(' · ')}</option>
+              );
+            })}
+          </select>
+          {errors.resourceId && <p className="text-xs text-red-500 mt-1 font-medium">{errors.resourceId.message}</p>}
+        </div>
 
         {resourceName && <p className="text-sm text-gray-600">Resource: {resourceName}</p>}
 

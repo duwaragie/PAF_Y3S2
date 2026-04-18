@@ -292,11 +292,15 @@ public class BookingService {
             throw new BadRequestException("You can only cancel your own bookings");
         }
 
-        if (booking.getStatus() != BookingStatus.APPROVED) {
-            throw new BadRequestException("Only approved bookings can be cancelled. Current status: " + booking.getStatus());
+        if (booking.getStatus() != BookingStatus.APPROVED
+                && booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Only pending or approved bookings can be cancelled. Current status: " + booking.getStatus());
         }
 
-        if (booking.getStartTime().isBefore(LocalDateTime.now())) {
+        // For APPROVED bookings the slot is locked, so block cancellation after the start time.
+        // PENDING requests can always be withdrawn.
+        if (booking.getStatus() == BookingStatus.APPROVED
+                && booking.getStartTime().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Cannot cancel bookings that have already started");
         }
 
@@ -329,6 +333,8 @@ public class BookingService {
                 .userEmail(booking.getUser().getEmail())
                 .resourceId(booking.getResource().getId())
                 .resourceName(booking.getResource().getName())
+                .locationName(booking.getResource().getLocation() != null
+                        ? booking.getResource().getLocation().getDisplayName() : null)
                 .startTime(booking.getStartTime())
                 .endTime(booking.getEndTime())
                 .purpose(booking.getPurpose())

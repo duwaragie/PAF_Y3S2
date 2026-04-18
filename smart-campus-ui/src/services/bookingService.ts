@@ -9,6 +9,7 @@ export interface BookingDTO {
   userEmail: string;
   resourceId: number;
   resourceName: string;
+  locationName?: string;
   startTime: string;
   endTime: string;
   purpose: string;

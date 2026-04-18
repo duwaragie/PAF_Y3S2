@@ -16,6 +16,7 @@ public class BookingDTO {
     private String userEmail;
     private Long resourceId;
     private String resourceName;
+    private String locationName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String purpose;
