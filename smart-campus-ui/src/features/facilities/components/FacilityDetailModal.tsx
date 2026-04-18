@@ -1,8 +1,19 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { type ResourceDTO } from '@/services/resourceService';
+import { type ResourceDTO, type DayOfWeek } from '@/services/resourceService';
 import { type AssetDTO } from '@/services/assetService';
 import { type AmenityDTO } from '@/services/amenityService';
 import { formatAvailabilitySummary } from '@/utils/scheduleUtils';
+
+const WEEK_DAYS: { key: DayOfWeek; label: string }[] = [
+  { key: 'MONDAY', label: 'Mon' },
+  { key: 'TUESDAY', label: 'Tue' },
+  { key: 'WEDNESDAY', label: 'Wed' },
+  { key: 'THURSDAY', label: 'Thu' },
+  { key: 'FRIDAY', label: 'Fri' },
+  { key: 'SATURDAY', label: 'Sat' },
+  { key: 'SUNDAY', label: 'Sun' },
+];
 
 interface FacilityDetailModalProps {
   isOpen: boolean;
@@ -39,10 +50,27 @@ export function FacilityDetailModal({
   availableAmenities,
 }: FacilityDetailModalProps) {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !resource) return null;
 
   const resourceAssets = availableAssets.filter(a => resource.assetIds?.includes(a.id));
   const resourceAmenities = availableAmenities.filter(a => resource.amenityIds?.includes(a.id));
+
+  // Map availability by dayOfWeek for the visual grid.
+  const availabilityByDay = new Map<DayOfWeek, { startTime: string; endTime: string }>();
+  (resource.availabilities ?? []).forEach((a) => {
+    availabilityByDay.set(a.dayOfWeek, { startTime: a.startTime, endTime: a.endTime });
+  });
+  const trimTime = (t: string) => (t.length >= 5 ? t.slice(0, 5) : t);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
@@ -99,13 +127,35 @@ export function FacilityDetailModal({
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Availability</p>
-                <div className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100 max-w-full">
-                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-xs text-gray-700 whitespace-pre-wrap">{formatAvailabilitySummary(resource.availabilities)}</span>
-                </div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Availability</p>
+                {availabilityByDay.size === 0 ? (
+                  <p className="text-xs text-gray-500 italic">Not specified</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      {WEEK_DAYS.map(({ key, label }) => {
+                        const open = availabilityByDay.get(key);
+                        return (
+                          <div
+                            key={key}
+                            className={`flex flex-col items-center min-w-[44px] px-1.5 py-1.5 rounded-lg border text-[10px] ${
+                              open
+                                ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                : 'bg-gray-50 border-gray-100 text-gray-400'
+                            }`}
+                            title={open ? `${trimTime(open.startTime)} – ${trimTime(open.endTime)}` : 'Closed'}
+                          >
+                            <span className="font-bold uppercase tracking-wider">{label}</span>
+                            <span className="mt-0.5 tabular-nums">
+                              {open ? `${trimTime(open.startTime)}–${trimTime(open.endTime)}` : 'Closed'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2">{formatAvailabilitySummary(resource.availabilities)}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
