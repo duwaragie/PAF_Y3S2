@@ -174,7 +174,7 @@ export function AdminBookingManagement() {
           <p className="text-xs text-gray-500 mt-1">New requests will appear here.</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {bookings.map((booking) => (
             <div key={booking.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div className="flex justify-between items-start gap-4 mb-3">
@@ -202,19 +202,22 @@ export function AdminBookingManagement() {
                     {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Location</p>
+                  <p className="truncate">{booking.locationName || '—'}</p>
+                </div>
+                {booking.expectedAttendees != null && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Attendees</p>
+                    <p>{booking.expectedAttendees}</p>
+                  </div>
+                )}
               </div>
 
               <div className="mb-2">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Purpose</p>
                 <p className="text-sm text-gray-700">{booking.purpose}</p>
               </div>
-
-              {booking.expectedAttendees != null && (
-                <div className="mb-3">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Attendees</p>
-                  <p className="text-sm text-gray-700">{booking.expectedAttendees}</p>
-                </div>
-              )}
 
               <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-2">
                 <button

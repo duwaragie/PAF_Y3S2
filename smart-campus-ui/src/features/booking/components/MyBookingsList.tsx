@@ -114,7 +114,9 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-bold text-campus-900">Cancel Booking</h3>
+                <h3 className="text-base font-bold text-campus-900">
+                  {cancelConfirm.status === 'PENDING' ? 'Withdraw Request' : 'Cancel Booking'}
+                </h3>
                 <p className="text-sm text-gray-500">This action cannot be undone.</p>
               </div>
             </div>
@@ -151,13 +153,13 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
           <p className="text-xs text-gray-500 mt-1">Submit a booking request to see it here.</p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {bookings.map((booking) => (
             <div key={booking.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4 mb-3">
-                <div>
-                  <p className="text-sm font-semibold text-campus-800">{booking.resourceName}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{booking.purpose}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-campus-800 truncate">{booking.resourceName}</p>
+                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">{booking.purpose}</p>
                 </div>
                 <span className={`px-2.5 py-1 text-[10px] font-bold rounded-md shrink-0 ${statusStyle[booking.status]}`}>
                   {booking.status}
@@ -172,6 +174,10 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">End</p>
                   <p>{new Date(booking.endTime).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Location</p>
+                  <p className="truncate">{booking.locationName || '—'}</p>
                 </div>
                 {booking.expectedAttendees != null && (
                   <div>
@@ -189,7 +195,7 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
               )}
 
               {(booking.status === 'PENDING' || (booking.status === 'APPROVED' && new Date(booking.startTime) > new Date())) && (
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="mt-4 flex justify-end gap-2 flex-wrap">
                   {booking.status === 'PENDING' && onEdit && (
                     <button
                       onClick={() => onEdit(booking)}
@@ -198,14 +204,12 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
                       Edit
                     </button>
                   )}
-                  {booking.status === 'APPROVED' && (
-                    <button
-                      onClick={() => setCancelConfirm(booking)}
-                      className="h-9 px-4 border border-red-200 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      Cancel Booking
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setCancelConfirm(booking)}
+                    className="h-9 px-4 border border-red-200 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    {booking.status === 'PENDING' ? 'Withdraw' : 'Cancel Booking'}
+                  </button>
                 </div>
               )}
             </div>

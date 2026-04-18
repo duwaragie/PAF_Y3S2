@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { type ResourceDTO } from '@/services/resourceService';
 import { type AssetDTO } from '@/services/assetService';
 import { type AmenityDTO } from '@/services/amenityService';
@@ -37,6 +38,7 @@ export function FacilityDetailModal({
   availableAssets,
   availableAmenities,
 }: FacilityDetailModalProps) {
+  const navigate = useNavigate();
   if (!isOpen || !resource) return null;
 
   const resourceAssets = availableAssets.filter(a => resource.assetIds?.includes(a.id));
@@ -179,9 +181,8 @@ export function FacilityDetailModal({
           <div className="flex items-center justify-end p-5 border-t border-gray-100 shrink-0 bg-gray-50/50 rounded-b-2xl">
             <button
               onClick={() => {
-                // In a real app, this would route to the booking page with the resource ID pre-filled
-                alert(`Redirecting to booking page for ${resource.name}...`);
                 onClose();
+                navigate(`/bookings?resourceId=${resource.id}`);
               }}
               className="h-10 px-6 bg-campus-600 text-white text-sm font-semibold rounded-xl hover:bg-campus-700 transition-colors shadow-sm flex items-center gap-2"
             >
