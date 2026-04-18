@@ -1,4 +1,3 @@
-import React from 'react';
 import { type ResourceDTO } from '@/services/resourceService';
 import { type AssetDTO } from '@/services/assetService';
 import { type AmenityDTO } from '@/services/amenityService';
@@ -161,13 +160,13 @@ export function FacilityDetailModal({
         {mode === 'edit' && (
           <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 shrink-0 bg-gray-50/50 rounded-b-2xl">
             <button
-              onClick={() => { onClose(); onDelete && onDelete(resource); }}
+              onClick={() => { onClose(); onDelete?.(resource); }}
               className="h-10 px-5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
             >
               Delete Facility
             </button>
             <button
-              onClick={() => { onClose(); onEdit && onEdit(resource); }}
+              onClick={() => { onClose(); onEdit?.(resource); }}
               className="h-10 px-6 bg-campus-800 text-white text-sm font-semibold rounded-xl hover:bg-campus-700 transition-colors shadow-sm"
             >
               Edit Details

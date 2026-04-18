@@ -3,17 +3,10 @@ import AppLayout from '@/components/layout/AppLayout';
 import { resourceService, type ResourceDTO, type ResourceSearchParams, type ResourceAvailabilityDTO, type DayOfWeek } from '@/services/resourceService';
 import { assetService, type AssetDTO } from '@/services/assetService';
 import { amenityService, type AmenityDTO } from '@/services/amenityService';
+import { locationService, type LocationDTO } from '@/services/locationService';
 import { storageService } from '@/services/storageService';
 import { FacilityDetailModal } from '@/features/facilities/components/FacilityDetailModal';
 import { formatAvailabilitySummary } from '@/utils/scheduleUtils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 const TYPES = ['LECTURE_HALL', 'LAB', 'MEETING_ROOM', 'EQUIPMENT'] as const;
 const STATUSES = ['ACTIVE', 'OUT_OF_SERVICE', 'UNDER_MAINTENANCE'] as const;
@@ -68,6 +61,7 @@ export default function FacilitiesPage() {
   const [resources, setResources] = useState<ResourceDTO[]>([]);
   const [availableAssets, setAvailableAssets] = useState<AssetDTO[]>([]);
   const [availableAmenities, setAvailableAmenities] = useState<AmenityDTO[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<LocationDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -82,6 +76,8 @@ export default function FacilitiesPage() {
   
   // Modal State
   const [selectedFacility, setSelectedFacility] = useState<ResourceDTO | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ResourceDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Image Upload/Paste State
   const [imageUploadMode, setImageUploadMode] = useState<'upload' | 'url'>('upload');
@@ -113,12 +109,14 @@ export default function FacilitiesPage() {
   useEffect(() => {
     const loadCatalogues = async () => {
       try {
-        const [resAssets, resAmenities] = await Promise.all([
+        const [resAssets, resAmenities, resLocations] = await Promise.all([
           assetService.getAll().catch(() => ({ data: [] })),
           amenityService.getAll().catch(() => ({ data: [] })),
+          locationService.getAll().catch(() => ({ data: [] })),
         ]);
         setAvailableAssets(resAssets.data);
         setAvailableAmenities(resAmenities.data);
+        setAvailableLocations(resLocations.data);
       } catch {
         // non-blocking
       }
@@ -276,7 +274,7 @@ export default function FacilitiesPage() {
         }
       });
 
-      const payload: any = {
+      const payload = {
         name: form.name.trim(),
         type: form.type,
         capacity: form.capacity ? parseInt(form.capacity) : null,
@@ -421,6 +419,20 @@ export default function FacilitiesPage() {
                           className={`w-full h-11 px-4 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${formErrors.name ? 'border-red-300 bg-red-50/30' : 'border-gray-200 bg-gray-50/50 focus:bg-white'}`}
                       />
                       {formErrors.name && <p className="text-xs text-red-500 mt-1 font-medium">{formErrors.name}</p>}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Location <span className="text-red-400">*</span></label>
+                      <select
+                          value={form.locationId}
+                          onChange={(e) => { setForm({ ...form, locationId: e.target.value === '' ? '' : Number(e.target.value) }); setFormErrors({ ...formErrors, locationId: undefined }); }}
+                          className={`w-full h-11 px-4 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${formErrors.locationId ? 'border-red-300 bg-red-50/30' : 'border-gray-200 bg-gray-50/50 focus:bg-white'}`}
+                      >
+                        <option value="">Select a location</option>
+                        {availableLocations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>{loc.displayName}</option>
+                        ))}
+                      </select>
+                      {formErrors.locationId && <p className="text-xs text-red-500 mt-1 font-medium">{formErrors.locationId}</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -701,7 +713,7 @@ export default function FacilitiesPage() {
           )}
         </div>
 
-        <FacilityDetailModal 
+        <FacilityDetailModal
           isOpen={!!selectedFacility}
           onClose={() => setSelectedFacility(null)}
           resource={selectedFacility}
@@ -711,6 +723,43 @@ export default function FacilitiesPage() {
           availableAssets={availableAssets}
           availableAmenities={availableAmenities}
         />
+
+        {deleteConfirm && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 max-w-sm w-full mx-4 animate-slide-up">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-campus-900">Delete Facility</h3>
+                    <p className="text-sm text-gray-500">This action cannot be undone.</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete <strong>{deleteConfirm.name}</strong>? All associated bookings and records will be permanently removed.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                      onClick={async () => { await handleDelete(deleteConfirm); setDeleteConfirm(null); }}
+                      disabled={deleting}
+                      className="flex-1 h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 disabled:opacity-60 transition-colors"
+                  >
+                    {deleting ? 'Deleting...' : 'Yes, Delete'}
+                  </button>
+                  <button
+                      onClick={() => setDeleteConfirm(null)}
+                      disabled={deleting}
+                      className="flex-1 h-11 border border-gray-200 text-sm font-semibold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+        )}
       </AppLayout>
   );
 }
