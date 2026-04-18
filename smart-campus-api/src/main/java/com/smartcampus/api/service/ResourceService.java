@@ -12,6 +12,7 @@ import com.smartcampus.api.repository.AssetRepository;
 import com.smartcampus.api.repository.AmenityRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -20,16 +21,19 @@ import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final AssetRepository assetRepository;
     private final AmenityRepository amenityRepository;
 
+    @Transactional(readOnly = true)
     public List<ResourceDTO> getAllResources() {
         return resourceRepository.findAll().stream().map(this::convertToDTO).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ResourceDTO> searchResources(ResourceType type, ResourceStatus status, String location, Integer minCapacity, List<Long> assetIds, List<Long> amenityIds) {
         Long assetCount = (assetIds != null && !assetIds.isEmpty()) ? (long) assetIds.size() : null;
         Long amenityCount = (amenityIds != null && !amenityIds.isEmpty()) ? (long) amenityIds.size() : null;
@@ -42,12 +46,14 @@ public class ResourceService {
                 .stream().map(this::convertToDTO).toList();
     }
 
+    @Transactional(readOnly = true)
     public ResourceDTO getResourceById(Long id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
         return convertToDTO(resource);
     }
 
+    @Transactional
     public ResourceDTO createResource(ResourceDTO dto) {
         Resource resource = new Resource();
         resource.setName(dto.getName());
@@ -63,6 +69,7 @@ public class ResourceService {
         return convertToDTO(resourceRepository.save(resource));
     }
 
+    @Transactional
     public ResourceDTO updateResource(Long id, ResourceDTO dto) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
@@ -79,6 +86,7 @@ public class ResourceService {
         return convertToDTO(resourceRepository.save(resource));
     }
 
+   o
     public void deleteResource(Long id) {
         if (!resourceRepository.existsById(id)) {
             throw new ResourceNotFoundException("Resource not found with id: " + id);
