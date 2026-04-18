@@ -32,20 +32,32 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByResourceId(Long resourceId);
     
     /**
-     * Check for overlapping bookings (scheduling conflicts)
-     * Returns bookings that:
-     * - Are for the same resource
-     * - Have status APPROVED or PENDING
-     * - Have overlapping time ranges with the requested time range
+     * Check for HARD scheduling conflicts — only APPROVED bookings lock the slot.
+     * PENDING requests do not block other requests; admins choose between competing PENDING ones.
      */
     @Query("SELECT b FROM Booking b WHERE b.resource.id = :resourceId " +
-           "AND b.status IN ('APPROVED', 'PENDING') " +
+           "AND b.status = 'APPROVED' " +
            "AND b.startTime < :endTime " +
            "AND b.endTime > :startTime")
     List<Booking> findConflictingBookings(
             @Param("resourceId") Long resourceId,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * Find overlapping PENDING bookings for the same resource (used when approving one
+     * so we can auto-reject the losers).
+     */
+    @Query("SELECT b FROM Booking b WHERE b.resource.id = :resourceId " +
+           "AND b.status = 'PENDING' " +
+           "AND b.id <> :excludeBookingId " +
+           "AND b.startTime < :endTime " +
+           "AND b.endTime > :startTime")
+    List<Booking> findOverlappingPendingBookings(
+            @Param("resourceId") Long resourceId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("excludeBookingId") Long excludeBookingId);
     
     /**
      * Find bookings by status

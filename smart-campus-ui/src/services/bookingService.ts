@@ -48,6 +48,9 @@ export const bookingService = {
   create: (data: CreateBookingRequest) =>
     api.post<BookingDTO>('/bookings', data),
 
+  update: (id: number, data: CreateBookingRequest) =>
+    api.put<BookingDTO>(`/bookings/${id}`, data),
+
   getById: (id: number) =>
     api.get<BookingDTO>(`/bookings/${id}`),
 

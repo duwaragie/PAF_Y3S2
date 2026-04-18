@@ -1,13 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { bookingService } from '@/services/bookingService';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { bookingService, type BookingDTO } from '@/services/bookingService';
+import { resourceService, type ResourceDTO } from '@/services/resourceService';
 
 const bookingSchema = z.object({
   resourceId: z.number().min(1, 'Resource is required'),
@@ -22,60 +18,143 @@ type BookingFormData = z.infer<typeof bookingSchema>;
 interface CreateBookingFormProps {
   resourceId?: number;
   resourceName?: string;
+  editingBooking?: BookingDTO;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function CreateBookingForm({ resourceId, resourceName, onSuccess }: CreateBookingFormProps) {
+/**
+ * Convert ISO/UTC timestamp → "yyyy-MM-ddTHH:mm" for <input type="datetime-local">.
+ */
+function toDatetimeLocal(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function CreateBookingForm({ resourceId, resourceName, editingBooking, onSuccess, onCancel }: CreateBookingFormProps) {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [resources, setResources] = useState<ResourceDTO[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const isEditMode = !!editingBooking;
+
+  useEffect(() => {
+    if (resourceId && !isEditMode) return;
+    resourceService.search({ status: 'ACTIVE' })
+      .then((res) => setResources(res.data))
+      .catch(() => setResources([]));
+  }, [resourceId, isEditMode]);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
+    setValue,
   } = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
-    defaultValues: {
-      resourceId: resourceId || undefined,
-    },
+    defaultValues: editingBooking
+      ? {
+          resourceId: editingBooking.resourceId,
+          startTime: toDatetimeLocal(editingBooking.startTime),
+          endTime: toDatetimeLocal(editingBooking.endTime),
+          purpose: editingBooking.purpose,
+          expectedAttendees: editingBooking.expectedAttendees ?? undefined,
+        }
+      : {
+          resourceId: resourceId || undefined,
+        },
   });
+
+  const selectedResourceId = watch('resourceId');
+  const selectedResource = useMemo(
+    () => resources.find((r) => r.id === Number(selectedResourceId)),
+    [resources, selectedResourceId],
+  );
+  const capacityHint = selectedResource?.capacity ?? null;
+
+  // When editing, re-apply the saved resourceId once the async dropdown options land.
+  useEffect(() => {
+    if (!editingBooking) return;
+    if (resources.some((r) => r.id === editingBooking.resourceId)) {
+      setValue('resourceId', editingBooking.resourceId);
+    }
+  }, [resources, editingBooking, setValue]);
 
   const onSubmit = async (data: BookingFormData) => {
     setLoading(true);
+    setError(null);
+    setSuccess(null);
     try {
-      await bookingService.create(data);
-      toast({
-        title: 'Success',
-        description: 'Booking request submitted successfully. Awaiting admin approval.',
-      });
-      reset();
+      if (isEditMode && editingBooking) {
+        await bookingService.update(editingBooking.id, data);
+        setSuccess('Booking updated. Awaiting admin approval.');
+      } else {
+        await bookingService.create(data);
+        setSuccess('Booking request submitted successfully. Awaiting admin approval.');
+        reset();
+      }
       onSuccess?.();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to create booking',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || (isEditMode ? 'Failed to update booking' : 'Failed to create booking'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card className="p-6 w-full max-w-2xl">
-      <h2 className="text-2xl font-bold mb-6">Request a Booking</h2>
+    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm w-full">
+      <h2 className="text-lg font-bold text-campus-900 mb-5">
+        {isEditMode ? 'Edit Booking' : 'Request a Booking'}
+      </h2>
+
+      {error && (
+        <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <circle cx="12" cy="12" r="10" /><path d="M12 8v4m0 4h.01" />
+          </svg>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3" />
+          </svg>
+          {success}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {!resourceId && (
           <div>
-            <Label htmlFor="resourceId">Resource</Label>
-            <Input
+            <label htmlFor="resourceId" className="text-sm font-medium text-gray-700 mb-1 block">
+              Resource <span className="text-red-400">*</span>
+            </label>
+            <select
               id="resourceId"
-              type="number"
-              placeholder="Enter resource ID"
               {...register('resourceId', { valueAsNumber: true })}
-              className={errors.resourceId ? 'border-red-500' : ''}
-            />
-            {errors.resourceId && <p className="text-red-500 text-sm mt-1">{errors.resourceId.message}</p>}
+              className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.resourceId ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
+            >
+              <option value="">Select a facility</option>
+              {editingBooking && !resources.some((r) => r.id === editingBooking.resourceId) && (
+                <option value={editingBooking.resourceId}>
+                  {editingBooking.resourceName} (currently unavailable)
+                </option>
+              )}
+              {resources.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} — {r.location}{r.capacity ? ` (${r.capacity} pax)` : ''}
+                </option>
+              ))}
+            </select>
+            {errors.resourceId && <p className="text-xs text-red-500 mt-1 font-medium">{errors.resourceId.message}</p>}
           </div>
         )}
 
@@ -83,57 +162,84 @@ export function CreateBookingForm({ resourceId, resourceName, onSuccess }: Creat
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="startTime">Start Time</Label>
-            <Input
+            <label htmlFor="startTime" className="text-sm font-medium text-gray-700 mb-1 block">
+              Start Time <span className="text-red-400">*</span>
+            </label>
+            <input
               id="startTime"
               type="datetime-local"
               {...register('startTime')}
-              className={errors.startTime ? 'border-red-500' : ''}
+              className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.startTime ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
             />
-            {errors.startTime && <p className="text-red-500 text-sm mt-1">{errors.startTime.message}</p>}
+            {errors.startTime && <p className="text-xs text-red-500 mt-1 font-medium">{errors.startTime.message}</p>}
           </div>
 
           <div>
-            <Label htmlFor="endTime">End Time</Label>
-            <Input
+            <label htmlFor="endTime" className="text-sm font-medium text-gray-700 mb-1 block">
+              End Time <span className="text-red-400">*</span>
+            </label>
+            <input
               id="endTime"
               type="datetime-local"
               {...register('endTime')}
-              className={errors.endTime ? 'border-red-500' : ''}
+              className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.endTime ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
             />
-            {errors.endTime && <p className="text-red-500 text-sm mt-1">{errors.endTime.message}</p>}
+            {errors.endTime && <p className="text-xs text-red-500 mt-1 font-medium">{errors.endTime.message}</p>}
           </div>
         </div>
 
         <div>
-          <Label htmlFor="purpose">Purpose</Label>
-          <Input
+          <label htmlFor="purpose" className="text-sm font-medium text-gray-700 mb-1 block">
+            Purpose <span className="text-red-400">*</span>
+          </label>
+          <input
             id="purpose"
             placeholder="Describe the purpose of the booking"
             {...register('purpose')}
-            className={errors.purpose ? 'border-red-500' : ''}
+            className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.purpose ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
           />
-          {errors.purpose && <p className="text-red-500 text-sm mt-1">{errors.purpose.message}</p>}
+          {errors.purpose && <p className="text-xs text-red-500 mt-1 font-medium">{errors.purpose.message}</p>}
         </div>
 
         <div>
-          <Label htmlFor="expectedAttendees">Expected Attendees (Optional)</Label>
-          <Input
+          <label htmlFor="expectedAttendees" className="text-sm font-medium text-gray-700 mb-1 block">
+            Expected Attendees
+            {capacityHint != null && <span className="ml-2 text-xs font-normal text-gray-400">(max {capacityHint} for this facility)</span>}
+          </label>
+          <input
             id="expectedAttendees"
             type="number"
+            min={1}
+            max={capacityHint ?? undefined}
             placeholder="Number of attendees"
             {...register('expectedAttendees', { valueAsNumber: true })}
-            className={errors.expectedAttendees ? 'border-red-500' : ''}
+            className={`w-full h-11 px-4 rounded-xl border text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors ${errors.expectedAttendees ? 'border-red-300 bg-red-50/30' : 'border-gray-200'}`}
           />
           {errors.expectedAttendees && (
-            <p className="text-red-500 text-sm mt-1">{errors.expectedAttendees.message}</p>
+            <p className="text-xs text-red-500 mt-1 font-medium">{errors.expectedAttendees.message}</p>
           )}
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? 'Submitting...' : 'Submit Booking Request'}
-        </Button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 h-11 bg-campus-800 text-white text-sm font-semibold rounded-xl hover:bg-campus-700 disabled:opacity-60 transition-colors"
+          >
+            {loading ? (isEditMode ? 'Saving...' : 'Submitting...') : (isEditMode ? 'Save Changes' : 'Submit Booking Request')}
+          </button>
+          {isEditMode && onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="h-11 px-6 border border-gray-200 text-sm font-semibold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
-    </Card>
+    </div>
   );
 }

@@ -46,7 +46,17 @@ public class BookingService {
         Resource resource = resourceRepository.findById(request.getResourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + request.getResourceId()));
 
-        // Check for scheduling conflicts
+        // Validate expected attendees against resource capacity
+        if (resource.getCapacity() != null
+                && request.getExpectedAttendees() != null
+                && request.getExpectedAttendees() > resource.getCapacity()) {
+            throw new BadRequestException(
+                    "\"" + resource.getName() + "\" has a capacity of " + resource.getCapacity()
+                            + ", but you entered " + request.getExpectedAttendees()
+                            + " expected attendees. Please reduce the count or pick a larger facility.");
+        }
+
+        // Check for scheduling conflicts (APPROVED bookings only — PENDING does not block)
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
                 request.getResourceId(),
                 request.getStartTime(),
@@ -159,6 +169,86 @@ public class BookingService {
         booking.setStatus(BookingStatus.APPROVED);
         booking.setApprovedBy(admin);
         booking.setApprovedAt(LocalDateTime.now());
+
+        booking = bookingRepository.save(booking);
+
+        // Auto-reject any overlapping PENDING bookings for this resource — the slot is now locked.
+        List<Booking> losers = bookingRepository.findOverlappingPendingBookings(
+                booking.getResource().getId(),
+                booking.getStartTime(),
+                booking.getEndTime(),
+                booking.getId());
+        LocalDateTime now = LocalDateTime.now();
+        for (Booking loser : losers) {
+            loser.setStatus(BookingStatus.REJECTED);
+            loser.setRejectionReason("A conflicting booking for this time slot was approved.");
+            loser.setApprovedBy(admin);
+            loser.setApprovedAt(now);
+        }
+        if (!losers.isEmpty()) {
+            bookingRepository.saveAll(losers);
+        }
+
+        return convertToDTO(booking);
+    }
+
+    /**
+     * Update a PENDING booking (owner or admin). Re-validates capacity and conflicts.
+     * Status stays PENDING so admin reviews the latest version.
+     */
+    public BookingDTO updateBooking(Long bookingId, Long userId, CreateBookingRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        boolean isOwner = booking.getUser().getId().equals(userId);
+        boolean isAdmin = user.getRole() == Role.ADMIN;
+        if (!isOwner && !isAdmin) {
+            throw new BadRequestException("You can only edit your own bookings");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Only pending bookings can be edited. Current status: " + booking.getStatus());
+        }
+
+        if (request.getStartTime().isAfter(request.getEndTime())
+                || request.getStartTime().equals(request.getEndTime())) {
+            throw new BadRequestException("End time must be after start time");
+        }
+
+        Resource resource = resourceRepository.findById(request.getResourceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + request.getResourceId()));
+
+        if (resource.getCapacity() != null
+                && request.getExpectedAttendees() != null
+                && request.getExpectedAttendees() > resource.getCapacity()) {
+            throw new BadRequestException(
+                    "\"" + resource.getName() + "\" has a capacity of " + resource.getCapacity()
+                            + ", but you entered " + request.getExpectedAttendees()
+                            + " expected attendees. Please reduce the count or pick a larger facility.");
+        }
+
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(
+                request.getResourceId(),
+                request.getStartTime(),
+                request.getEndTime())
+                .stream()
+                .filter(b -> !b.getId().equals(bookingId))
+                .toList();
+
+        if (!conflicts.isEmpty()) {
+            throw new BadRequestException(
+                    "Resource is not available during the requested time range. " +
+                    "There are " + conflicts.size() + " conflicting booking(s).");
+        }
+
+        booking.setResource(resource);
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        booking.setPurpose(request.getPurpose());
+        booking.setExpectedAttendees(request.getExpectedAttendees());
 
         booking = bookingRepository.save(booking);
         return convertToDTO(booking);

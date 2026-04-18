@@ -1,25 +1,42 @@
 import { CreateBookingForm } from '../components/CreateBookingForm';
 import { MyBookingsList } from '../components/MyBookingsList';
 import { useState } from 'react';
+import AppLayout from '@/components/layout/AppLayout';
+import type { BookingDTO } from '@/services/bookingService';
 
 export function BookingPage() {
-  const [refreshList, setRefreshList] = useState(false);
+  const [refreshList, setRefreshList] = useState(0);
+  const [editingBooking, setEditingBooking] = useState<BookingDTO | null>(null);
 
-  const handleBookingSuccess = () => {
-    setRefreshList(!refreshList);
+  const handleSuccess = () => {
+    setEditingBooking(null);
+    setRefreshList((n) => n + 1);
   };
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Resource Booking</h1>
-        <p className="text-gray-600 mt-2">Request and manage your resource bookings</p>
-      </div>
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-campus-900">Resource Booking</h1>
+          <p className="text-sm text-gray-500 mt-1">Request and manage your resource bookings</p>
+        </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <CreateBookingForm onSuccess={handleBookingSuccess} />
-        <MyBookingsList key={refreshList.toString()} />
+        <div className="grid grid-cols-1 gap-6">
+          <CreateBookingForm
+            key={editingBooking?.id ?? 'new'}
+            editingBooking={editingBooking ?? undefined}
+            onSuccess={handleSuccess}
+            onCancel={() => setEditingBooking(null)}
+          />
+          <MyBookingsList
+            key={refreshList}
+            onEdit={(booking) => {
+              setEditingBooking(booking);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

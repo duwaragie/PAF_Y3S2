@@ -46,5 +46,27 @@ public class DataInitializer implements ApplicationRunner {
             userRepository.save(admin);
             log.info("Seeded admin user: {} (employeeId={})", adminEmail, adminEmployeeId);
         }
+
+        seedUser("student@test.com", "Test Student", "Student@1234!",
+                Role.STUDENT, "STU-0001", null);
+        seedUser("lecturer@test.com", "Test Lecturer", "Lecturer@1234!",
+                Role.LECTURER, null, "EMP-0002");
+    }
+
+    private void seedUser(String email, String name, String rawPassword, Role role,
+                          String studentRegNo, String employeeId) {
+        if (userRepository.findByEmail(email).isPresent()) return;
+
+        User user = new User();
+        user.setEmail(email);
+        user.setName(name);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole(role);
+        user.setAuthProvider(AuthProvider.LOCAL);
+        user.setEmailVerified(true);
+        if (studentRegNo != null) user.setStudentRegistrationNumber(studentRegNo);
+        if (employeeId != null) user.setEmployeeId(employeeId);
+        userRepository.save(user);
+        log.info("Seeded {} user: {}", role, email);
     }
 }

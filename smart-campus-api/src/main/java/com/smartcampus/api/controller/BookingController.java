@@ -5,6 +5,7 @@ import com.smartcampus.api.dto.CreateBookingRequest;
 import com.smartcampus.api.dto.ApproveBookingRequest;
 import com.smartcampus.api.dto.RejectBookingRequest;
 import com.smartcampus.api.model.BookingStatus;
+import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,7 @@ public class BookingController {
     public ResponseEntity<BookingDTO> createBooking(
             @Valid @RequestBody CreateBookingRequest request,
             Authentication authentication) {
-        Long userId = ((Number) authentication.getPrincipal()).longValue();
+        Long userId = ((User) authentication.getPrincipal()).getId();
         BookingDTO booking = bookingService.createBooking(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(booking);
     }
@@ -51,6 +52,21 @@ public class BookingController {
     }
 
     /**
+     * Update a PENDING booking (owner or admin)
+     * PUT /api/bookings/{id}
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BookingDTO> updateBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateBookingRequest request,
+            Authentication authentication) {
+        Long userId = ((User) authentication.getPrincipal()).getId();
+        BookingDTO booking = bookingService.updateBooking(id, userId, request);
+        return ResponseEntity.ok(booking);
+    }
+
+    /**
      * Get all bookings for the authenticated user
      * GET /api/bookings/my-bookings
      * Query params: status, page, size, sort
@@ -62,7 +78,7 @@ public class BookingController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Authentication authentication) {
-        Long userId = ((Number) authentication.getPrincipal()).longValue();
+        Long userId = ((User) authentication.getPrincipal()).getId();
         Pageable pageable = PageRequest.of(page, size);
         Page<BookingDTO> bookings = bookingService.getUserBookings(userId, status, pageable);
         return ResponseEntity.ok(bookings);
@@ -129,7 +145,7 @@ public class BookingController {
     public ResponseEntity<BookingDTO> approveBooking(
             @PathVariable Long id,
             Authentication authentication) {
-        Long adminId = ((Number) authentication.getPrincipal()).longValue();
+        Long adminId = ((User) authentication.getPrincipal()).getId();
         BookingDTO booking = bookingService.approveBooking(id, adminId);
         return ResponseEntity.ok(booking);
     }
@@ -144,7 +160,7 @@ public class BookingController {
             @PathVariable Long id,
             @Valid @RequestBody RejectBookingRequest request,
             Authentication authentication) {
-        Long adminId = ((Number) authentication.getPrincipal()).longValue();
+        Long adminId = ((User) authentication.getPrincipal()).getId();
         BookingDTO booking = bookingService.rejectBooking(id, adminId, request.getRejectionReason());
         return ResponseEntity.ok(booking);
     }
@@ -159,7 +175,7 @@ public class BookingController {
     public ResponseEntity<BookingDTO> cancelBooking(
             @PathVariable Long id,
             Authentication authentication) {
-        Long userId = ((Number) authentication.getPrincipal()).longValue();
+        Long userId = ((User) authentication.getPrincipal()).getId();
         BookingDTO booking = bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok(booking);
     }
