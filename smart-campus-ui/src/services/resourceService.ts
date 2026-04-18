@@ -1,5 +1,15 @@
 import { api } from '@/lib/axios';
 
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+export interface ResourceAvailabilityDTO {
+  id?: number;
+  resourceId?: number;
+  dayOfWeek: DayOfWeek;
+  startTime: string; // HH:mm:ss or HH:mm
+  endTime: string;   // HH:mm:ss or HH:mm
+}
+
 export interface ResourceDTO {
   id: number;
   name: string;
@@ -7,11 +17,11 @@ export interface ResourceDTO {
   capacity: number | null;
   locationId: number | null;
   locationName?: string;
-  availabilityWindows: string;
   status: 'ACTIVE' | 'OUT_OF_SERVICE' | 'UNDER_MAINTENANCE';
   imageUrl?: string;
   assetIds?: number[];
   amenityIds?: number[];
+  availabilities?: ResourceAvailabilityDTO[];
 }
 
 export interface ResourceSearchParams {
@@ -41,4 +51,11 @@ export const resourceService = {
 
   delete: (id: number) =>
     api.delete(`/resources/${id}`),
+
+  // Availability specific endpoints
+  getAvailabilities: (resourceId: number) =>
+    api.get<ResourceAvailabilityDTO[]>(`/resources/${resourceId}/availability`),
+
+  updateAvailabilities: (resourceId: number, data: ResourceAvailabilityDTO[]) =>
+    api.put<ResourceAvailabilityDTO[]>(`/resources/${resourceId}/availability`, data),
 };
