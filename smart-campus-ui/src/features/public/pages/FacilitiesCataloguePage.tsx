@@ -3,6 +3,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { resourceService, type ResourceDTO, type ResourceSearchParams } from '@/services/resourceService';
 import { assetService, type AssetDTO } from '@/services/assetService';
 import { amenityService, type AmenityDTO } from '@/services/amenityService';
+import { FacilityDetailModal } from '@/features/facilities/components/FacilityDetailModal';
 
 const TYPES = ['LECTURE_HALL', 'LAB', 'MEETING_ROOM', 'EQUIPMENT'] as const;
 
@@ -21,6 +22,9 @@ export default function FacilitiesCataloguePage() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchParams, setSearchParams] = useState<ResourceSearchParams>({ status: 'ACTIVE' });
+
+  // Modal State
+  const [selectedFacility, setSelectedFacility] = useState<ResourceDTO | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -218,8 +222,12 @@ export default function FacilitiesCataloguePage() {
                 </thead>
                 <tbody>
                   {resources.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-4 text-sm font-semibold text-campus-800">{r.name}</td>
+                    <tr 
+                      key={r.id} 
+                      onClick={() => setSelectedFacility(r)}
+                      className="border-b border-gray-50 hover:bg-campus-50/50 transition-colors cursor-pointer group"
+                    >
+                      <td className="px-5 py-4 text-sm font-semibold text-campus-800 group-hover:text-campus-900">{r.name}</td>
                       <td className="px-5 py-4 text-sm text-gray-600">
                         <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600">
                           {typeLabels[r.type] || r.type}
@@ -255,6 +263,15 @@ export default function FacilitiesCataloguePage() {
             )}
           </div>
         )}
+
+        <FacilityDetailModal 
+          isOpen={!!selectedFacility}
+          onClose={() => setSelectedFacility(null)}
+          resource={selectedFacility}
+          mode="view"
+          availableAssets={availableAssets}
+          availableAmenities={availableAmenities}
+        />
       </div>
     </AppLayout>
   );
