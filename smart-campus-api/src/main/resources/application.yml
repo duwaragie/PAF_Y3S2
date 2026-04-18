@@ -54,6 +54,13 @@ app:
     redirect-uri: http://localhost:5173/oauth2/redirect
   frontend:
     url: http://localhost:5173
+  push:
+    # VAPID identity for browser Push subscriptions. If public/private are blank,
+    # the backend generates a keypair on first start and persists it under
+    # smart-campus-api/.vapid-keys.json (git-ignored) so subsequent boots reuse it.
+    subject: mailto:smartcampus.team@gmail.com
+    public-key: ${PUSH_VAPID_PUBLIC_KEY:}
+    private-key: ${PUSH_VAPID_PRIVATE_KEY:}
   seed:
     admin-email: ${SEED_ADMIN_EMAIL:smartcampus.team@gmail.com}
     admin-password: ${SEED_ADMIN_PASSWORD:Admin@1234!}

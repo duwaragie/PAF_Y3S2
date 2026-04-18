@@ -6,6 +6,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/store/authStore';
 import { userService } from '@/services/userService';
 import { storageService } from '@/services/storageService';
+import NotificationPreferencesCard from '../components/NotificationPreferencesCard';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -163,6 +164,7 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
+      <div className="space-y-5">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-5 items-start">
         {/* Left column: identity + account info */}
         <div className="space-y-5 lg:sticky lg:top-24">
@@ -372,6 +374,9 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+      </div>
+
+      <NotificationPreferencesCard />
       </div>
     </AppLayout>
   );

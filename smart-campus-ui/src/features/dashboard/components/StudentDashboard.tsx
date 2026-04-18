@@ -2,16 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { bookingService, type BookingDTO } from '@/services/bookingService';
+import { dashboardService, type StudentDashboardSummary } from '@/services/dashboardService';
 
 export default function StudentDashboard() {
   const user = useAuthStore((s) => s.user);
   const [bookings, setBookings] = useState<BookingDTO[]>([]);
+  const [academics, setAcademics] = useState<StudentDashboardSummary | null>(null);
 
   useEffect(() => {
     // Pull a larger page so we can split by status client-side for dashboard stats.
     bookingService.getMyBookings(undefined, 0, 100)
       .then((res) => setBookings(res.data.content))
       .catch(() => setBookings([]));
+    dashboardService.studentSummary()
+      .then((res) => setAcademics(res.data))
+      .catch(() => setAcademics(null));
   }, []);
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'PENDING').length, [bookings]);
@@ -68,6 +73,64 @@ export default function StudentDashboard() {
             <p className="text-xs text-gray-400 mt-0.5">{stat.desc}</p>
           </div>
         ))}
+      </div>
+
+      {/* Academics */}
+      <div>
+        <h2 className="text-sm font-bold text-campus-900 mb-3 uppercase tracking-wider text-[11px]">Academics</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            {
+              label: 'Enrolled Modules',
+              value: String(academics?.activeEnrollments ?? 0),
+              desc: 'Sections you are currently in.',
+              color: 'bg-campus-50 text-campus-700',
+              iconPath: 'M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V2H6.5A2.5 2.5 0 004 4.5v15z',
+              link: '/enrollments',
+            },
+            {
+              label: 'Waitlisted',
+              value: String(academics?.waitlisted ?? 0),
+              desc: 'Sections you are on a waitlist for.',
+              color: 'bg-amber-50 text-amber-700',
+              iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+              link: '/enrollments',
+            },
+            {
+              label: 'Cumulative GPA',
+              value: (academics?.gpa ?? 0).toFixed(2),
+              desc: `${academics?.coursesCompleted ?? 0} course${academics?.coursesCompleted === 1 ? '' : 's'} completed.`,
+              color: 'bg-emerald-50 text-emerald-700',
+              iconPath: 'M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z',
+              link: '/transcript',
+            },
+            {
+              label: 'Credits Earned',
+              value: (academics?.creditsEarned ?? 0).toFixed(1),
+              desc: 'Across all completed courses.',
+              color: 'bg-purple-50 text-purple-700',
+              iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+              link: '/transcript',
+            },
+          ].map((stat) => (
+            <Link
+              to={stat.link}
+              key={stat.label}
+              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-soft transition-shadow"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-9 h-9 rounded-xl ${stat.color} flex items-center justify-center`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={stat.iconPath} />
+                  </svg>
+                </div>
+                <span className="text-2xl font-extrabold text-campus-900">{stat.value}</span>
+              </div>
+              <p className="text-xs font-semibold text-campus-800">{stat.label}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">{stat.desc}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

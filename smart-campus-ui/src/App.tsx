@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { notificationSocket } from '@/lib/notificationSocket';
+import { registerServiceWorker } from '@/lib/push';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import VerifyOtpPage from './features/auth/pages/VerifyOtpPage';
@@ -22,6 +24,12 @@ import ContactPage from './features/landing/pages/ContactPage';
 import ScrollToTop from './components/ScrollToTop';
 import { useAuthStore } from './store/authStore';
 import FacilitiesCataloguePage from './features/public/pages/FacilitiesCataloguePage';
+import CourseOfferingsAdminPage from './features/academics/pages/CourseOfferingsAdminPage';
+import LecturerCoursesPage from './features/academics/pages/LecturerCoursesPage';
+import BrowseCoursesPage from './features/academics/pages/BrowseCoursesPage';
+import MyEnrollmentsPage from './features/academics/pages/MyEnrollmentsPage';
+import TranscriptPage from './features/academics/pages/TranscriptPage';
+import UserNotificationsPage from './features/academics/pages/NotificationsPage';
 import { BookingPage, AdminBookingPage } from './features/booking';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
@@ -53,6 +61,23 @@ function RoleRoute({ children, roles }: { children: React.ReactElement; roles: s
 }
 
 function App() {
+  const token = useAuthStore((state) => state.token);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    // Register the push service worker once on app load — subscription flow
+    // is kicked off later from the preferences toggle.
+    void registerServiceWorker();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      notificationSocket.connect(token);
+      return () => notificationSocket.disconnect();
+    }
+    notificationSocket.disconnect();
+  }, [isAuthenticated, token]);
+
   return (
     <>
     <ScrollToTop />
@@ -77,6 +102,20 @@ function App() {
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/facilities" element={<ProtectedRoute><FacilitiesCataloguePage /></ProtectedRoute>} />
+
+      {/* Academics — student */}
+      <Route path="/courses" element={<RoleRoute roles={['STUDENT']}><BrowseCoursesPage /></RoleRoute>} />
+      <Route path="/enrollments" element={<RoleRoute roles={['STUDENT']}><MyEnrollmentsPage /></RoleRoute>} />
+      <Route path="/transcript" element={<RoleRoute roles={['STUDENT']}><TranscriptPage /></RoleRoute>} />
+
+      {/* Academics — lecturer */}
+      <Route path="/lecturer/courses" element={<RoleRoute roles={['LECTURER', 'ADMIN']}><LecturerCoursesPage /></RoleRoute>} />
+
+      {/* Academics — admin */}
+      <Route path="/admin/course-offerings" element={<RoleRoute roles={['ADMIN']}><CourseOfferingsAdminPage /></RoleRoute>} />
+
+      {/* Notifications (all authenticated users) */}
+      <Route path="/notifications" element={<ProtectedRoute><UserNotificationsPage /></ProtectedRoute>} />
       <Route path="/bookings" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
 
       {/* Admin routes */}

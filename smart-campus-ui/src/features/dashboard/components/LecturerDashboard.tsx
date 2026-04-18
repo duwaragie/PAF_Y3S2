@@ -2,15 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { bookingService, type BookingDTO } from '@/services/bookingService';
+import { dashboardService, type LecturerDashboardSummary } from '@/services/dashboardService';
 
 export default function LecturerDashboard() {
   const user = useAuthStore((s) => s.user);
   const [bookings, setBookings] = useState<BookingDTO[]>([]);
+  const [academics, setAcademics] = useState<LecturerDashboardSummary | null>(null);
 
   useEffect(() => {
     bookingService.getMyBookings(undefined, 0, 100)
       .then((res) => setBookings(res.data.content))
       .catch(() => setBookings([]));
+    dashboardService.lecturerSummary()
+      .then((res) => setAcademics(res.data))
+      .catch(() => setAcademics(null));
   }, []);
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'PENDING').length, [bookings]);
@@ -71,6 +76,69 @@ export default function LecturerDashboard() {
             <p className="text-xs text-gray-400 mt-0.5">{stat.desc}</p>
           </div>
         ))}
+      </div>
+
+      {/* Teaching load */}
+      <div>
+        <h2 className="text-sm font-bold text-campus-900 mb-3 uppercase tracking-wider text-[11px]">Teaching Load</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            {
+              label: 'Sections in charge',
+              value: String(academics?.sectionsInCharge ?? 0),
+              desc: `${academics?.offeringsInCharge ?? 0} module${academics?.offeringsInCharge === 1 ? '' : 's'} across ${academics?.sectionsInCharge ?? 0} section${academics?.sectionsInCharge === 1 ? '' : 's'}.`,
+              color: 'bg-campus-50 text-campus-700',
+              iconPath: 'M12 14l9-5-9-5-9 5 9 5zm0 0v8',
+              link: '/lecturer/courses',
+            },
+            {
+              label: 'Total students',
+              value: String(academics?.totalStudents ?? 0),
+              desc: 'Across every section you lead.',
+              color: 'bg-purple-50 text-purple-700',
+              iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+              link: '/lecturer/courses',
+            },
+            {
+              label: 'Pending grades',
+              value: String(academics?.pendingGrades ?? 0),
+              desc: 'Students awaiting a grade.',
+              color: 'bg-amber-50 text-amber-700',
+              iconPath: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+              link: '/lecturer/courses',
+            },
+            {
+              label: 'Ready to release',
+              value: String(academics?.gradedPendingRelease ?? 0),
+              desc: 'Grades set, pending release.',
+              color: 'bg-emerald-50 text-emerald-700',
+              iconPath: 'M13 10V3L4 14h7v7l9-11h-7z',
+              link: '/lecturer/courses',
+            },
+          ].map((stat) => (
+            <Link
+              to={stat.link}
+              key={stat.label}
+              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-soft transition-shadow"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-9 h-9 rounded-xl ${stat.color} flex items-center justify-center`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={stat.iconPath} />
+                  </svg>
+                </div>
+                <span className="text-2xl font-extrabold text-campus-900">{stat.value}</span>
+              </div>
+              <p className="text-xs font-semibold text-campus-800">{stat.label}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">{stat.desc}</p>
+            </Link>
+          ))}
+        </div>
+        {academics && academics.courseCodes && academics.courseCodes.length > 0 && (
+          <p className="text-[11px] text-gray-400 mt-3">
+            Courses: <span className="font-mono text-campus-700">{academics.courseCodes.join(', ')}</span>
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

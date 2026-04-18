@@ -10,4 +10,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // sockjs-client references `global` which isn't defined in the browser.
+  define: {
+    global: 'globalThis',
+  },
 })

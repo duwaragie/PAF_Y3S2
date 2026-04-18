@@ -4,6 +4,7 @@ import com.smartcampus.api.dto.BookingDTO;
 import com.smartcampus.api.dto.CreateBookingRequest;
 import com.smartcampus.api.dto.ApproveBookingRequest;
 import com.smartcampus.api.dto.RejectBookingRequest;
+import com.smartcampus.api.event.BookingEvents;
 import com.smartcampus.api.exception.ResourceNotFoundException;
 import com.smartcampus.api.exception.BadRequestException;
 import com.smartcampus.api.model.*;
@@ -11,6 +12,7 @@ import com.smartcampus.api.repository.BookingRepository;
 import com.smartcampus.api.repository.UserRepository;
 import com.smartcampus.api.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Create a new booking request
@@ -81,6 +84,7 @@ public class BookingService {
                 .build();
 
         booking = bookingRepository.save(booking);
+        eventPublisher.publishEvent(new BookingEvents.BookingCreated(booking));
         return convertToDTO(booking);
     }
 
@@ -187,8 +191,13 @@ public class BookingService {
         }
         if (!losers.isEmpty()) {
             bookingRepository.saveAll(losers);
+            for (Booking loser : losers) {
+                eventPublisher.publishEvent(new BookingEvents.BookingRejected(
+                        loser, adminId, loser.getRejectionReason()));
+            }
         }
 
+        eventPublisher.publishEvent(new BookingEvents.BookingApproved(booking, adminId));
         return convertToDTO(booking);
     }
 
@@ -274,6 +283,7 @@ public class BookingService {
         booking.setApprovedAt(LocalDateTime.now());
 
         booking = bookingRepository.save(booking);
+        eventPublisher.publishEvent(new BookingEvents.BookingRejected(booking, adminId, rejectionReason));
         return convertToDTO(booking);
     }
 
@@ -308,6 +318,7 @@ public class BookingService {
         booking.setCancelledAt(LocalDateTime.now());
 
         booking = bookingRepository.save(booking);
+        eventPublisher.publishEvent(new BookingEvents.BookingCancelled(booking, userId));
         return convertToDTO(booking);
     }
 
