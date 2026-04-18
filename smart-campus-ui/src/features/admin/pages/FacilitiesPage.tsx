@@ -4,6 +4,15 @@ import { resourceService, type ResourceDTO, type ResourceSearchParams } from '@/
 import { assetService, type AssetDTO } from '@/services/assetService';
 import { amenityService, type AmenityDTO } from '@/services/amenityService';
 import { storageService } from '@/services/storageService';
+import { FacilityDetailModal } from '@/features/facilities/components/FacilityDetailModal';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const TYPES = ['LECTURE_HALL', 'LAB', 'MEETING_ROOM', 'EQUIPMENT'] as const;
 const STATUSES = ['ACTIVE', 'OUT_OF_SERVICE', 'UNDER_MAINTENANCE'] as const;
@@ -63,7 +72,14 @@ export default function FacilitiesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<ResourceDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Modal State
+  const [selectedFacility, setSelectedFacility] = useState<ResourceDTO | null>(null);
+
+  // Image Upload/Paste State
+  const [imageUploadMode, setImageUploadMode] = useState<'upload' | 'url'>('upload');
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [pastedImageUrl, setPastedImageUrl] = useState<string>('');
+  const [imagePreviewError, setImagePreviewError] = useState<boolean>(false);
 
   useEffect(() => {
     const run = async () => {
@@ -111,7 +127,11 @@ export default function FacilitiesPage() {
     setFormErrors({});
     setEditingId(null);
     setImageFile(null);
+    setPastedImageUrl('');
+    setImageUploadMode('upload');
+    setImagePreviewError(false);
     setShowForm(true);
+    setSelectedFacility(null); // Close modal if open
     clearMessages();
   };
 
@@ -128,9 +148,26 @@ export default function FacilitiesPage() {
     });
     setFormErrors({});
     setEditingId(r.id);
+    
+    // Set up image state based on existing URL
     setImageFile(null);
+    setImagePreviewError(false);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+    if (r.imageUrl && supabaseUrl && !r.imageUrl.startsWith(supabaseUrl)) {
+      setImageUploadMode('url');
+      setPastedImageUrl(r.imageUrl);
+    } else {
+      setImageUploadMode('upload');
+      setPastedImageUrl('');
+    }
+
     setShowForm(true);
+    setSelectedFacility(null); // Close modal to show form
     clearMessages();
+  };
+
+  const handleRowClick = (r: ResourceDTO) => {
+    setSelectedFacility(r);
   };
 
   const toggleAsset = (id: number) => {
@@ -169,10 +206,16 @@ export default function FacilitiesPage() {
       setSaving(true);
       clearMessages();
 
-      let imageUrl: string | undefined = editingId ? resources.find(r => r.id === editingId)?.imageUrl : undefined;
+      let finalImageUrl: string | undefined = editingId ? resources.find(r => r.id === editingId)?.imageUrl : undefined;
 
-      if (imageFile) {
-        imageUrl = await storageService.upload(imageFile, 'resources');
+      if (imageUploadMode === 'upload' && imageFile) {
+        finalImageUrl = await storageService.upload(imageFile, 'resources');
+      } else if (imageUploadMode === 'url' && pastedImageUrl.trim() !== '') {
+        finalImageUrl = pastedImageUrl.trim();
+      } else if (imageUploadMode === 'upload' && !imageFile && !editingId) {
+        finalImageUrl = undefined;
+      } else if (imageUploadMode === 'url' && pastedImageUrl.trim() === '') {
+        finalImageUrl = undefined;
       }
 
       const payload = {
@@ -184,7 +227,7 @@ export default function FacilitiesPage() {
         status: form.status,
         assetIds: form.assetIds,
         amenityIds: form.amenityIds,
-        imageUrl: imageUrl,
+        imageUrl: finalImageUrl,
       };
 
       if (editingId) {
@@ -206,23 +249,22 @@ export default function FacilitiesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteConfirm) return;
+  const handleDelete = async (resourceToDelete: ResourceDTO) => {
     try {
       setDeleting(true);
       clearMessages();
 
-      if (deleteConfirm.imageUrl) {
-        await storageService.remove(deleteConfirm.imageUrl);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+      if (resourceToDelete.imageUrl && supabaseUrl && resourceToDelete.imageUrl.startsWith(supabaseUrl)) {
+        await storageService.remove(resourceToDelete.imageUrl);
       }
 
-      await resourceService.delete(deleteConfirm.id);
-      setResources((prev) => prev.filter((r) => r.id !== deleteConfirm.id));
-      setSuccess(`"${deleteConfirm.name}" has been deleted.`);
-      setDeleteConfirm(null);
+      await resourceService.delete(resourceToDelete.id);
+      setResources((prev) => prev.filter((r) => r.id !== resourceToDelete.id));
+      setSuccess(`"${resourceToDelete.name}" has been deleted.`);
+      setSelectedFacility(null);
     } catch {
       setError('Failed to delete resource.');
-      setDeleteConfirm(null);
     } finally {
       setDeleting(false);
     }
@@ -255,7 +297,7 @@ export default function FacilitiesPage() {
           )}
 
           {/* Filter Bar */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm animate-fade-in">
             <form onSubmit={(e) => { e.preventDefault(); /* handled by effect */ }} className="flex flex-wrap items-end gap-4">
               <div className="flex-1 min-w-[150px]">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Type</label>
@@ -316,48 +358,11 @@ export default function FacilitiesPage() {
             </form>
           </div>
 
-          {/* Delete Confirmation Modal */}
-          {deleteConfirm && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 max-w-sm w-full mx-4 animate-slide-up">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-campus-900">Delete Facility</h3>
-                      <p className="text-sm text-gray-500">This action cannot be undone.</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Are you sure you want to delete <strong>{deleteConfirm.name}</strong>? All associated bookings and records will be permanently removed.
-                  </p>
-                  <div className="flex gap-3">
-                    <button
-                        onClick={handleDelete}
-                        disabled={deleting}
-                        className="flex-1 h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 disabled:opacity-60 transition-colors"
-                    >
-                      {deleting ? 'Deleting...' : 'Yes, Delete'}
-                    </button>
-                    <button
-                        onClick={() => setDeleteConfirm(null)}
-                        disabled={deleting}
-                        className="flex-1 h-11 border border-gray-200 text-sm font-semibold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-          )}
-
           {showForm && (
               <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4 shadow-soft animate-slide-up">
                 <h2 className="text-lg font-bold text-campus-900">{editingId ? 'Edit Facility' : 'Add New Facility'}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">Name <span className="text-red-400">*</span></label>
@@ -415,24 +420,84 @@ export default function FacilitiesPage() {
                           {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
                         </select>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-1 block">Facility Image</label>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Assets, Amenities, and Image Upload */}
+                  <div className="space-y-6 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    
+                    {/* Image Upload/Paste Section */}
+                    <div>
+                      <label className="text-sm font-semibold text-gray-800 mb-3 block">Facility Image</label>
+                      <div className="flex items-center gap-4 mb-3">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                          <input 
+                            type="radio" 
+                            name="imageMode" 
+                            className="text-campus-600 focus:ring-campus-500"
+                            checked={imageUploadMode === 'upload'}
+                            onChange={() => setImageUploadMode('upload')}
+                          />
+                          Upload file
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                          <input 
+                            type="radio" 
+                            name="imageMode" 
+                            className="text-campus-600 focus:ring-campus-500"
+                            checked={imageUploadMode === 'url'}
+                            onChange={() => setImageUploadMode('url')}
+                          />
+                          Paste image URL
+                        </label>
+                      </div>
+
+                      {imageUploadMode === 'upload' ? (
                         <input
                           type="file"
                           accept="image/png, image/jpeg"
                           onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
-                          className="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-campus-50 file:text-campus-700 hover:file:bg-campus-100 cursor-pointer pt-1"
+                          className="w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-campus-700 file:border-gray-200 file:border hover:file:bg-gray-50 cursor-pointer"
                         />
-                      </div>
+                      ) : (
+                        <div className="flex gap-3 items-center">
+                          <div className="flex-1">
+                            <input
+                              type="url"
+                              value={pastedImageUrl}
+                              onChange={(e) => {
+                                setPastedImageUrl(e.target.value);
+                                setImagePreviewError(false);
+                              }}
+                              placeholder="https://example.com/image.jpg"
+                              className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors"
+                            />
+                          </div>
+                          {pastedImageUrl && !imagePreviewError && (
+                            <img 
+                              src={pastedImageUrl} 
+                              alt="Preview" 
+                              className="w-10 h-10 object-cover rounded-lg border border-gray-200 shrink-0"
+                              onError={() => setImagePreviewError(true)}
+                            />
+                          )}
+                          {pastedImageUrl && imagePreviewError && (
+                            <div className="w-10 h-10 bg-red-50 rounded-lg border border-red-200 flex items-center justify-center shrink-0" title="Invalid image URL">
+                              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Right Column: Assets and Amenities */}
-                  <div className="space-y-6 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                    <hr className="border-gray-200" />
+
                     <div>
                       <label className="text-sm font-semibold text-gray-800 mb-3 block">Included Assets</label>
                       {availableAssets.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                           {availableAssets.map((a) => (
                             <label key={a.id} className="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-gray-200">
                               <input type="checkbox" className="mt-1 rounded text-campus-600 focus:ring-campus-500" checked={form.assetIds.includes(a.id)} onChange={() => toggleAsset(a.id)} />
@@ -451,7 +516,7 @@ export default function FacilitiesPage() {
                     <div>
                       <label className="text-sm font-semibold text-gray-800 mb-3 block">Included Amenities</label>
                       {availableAmenities.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                           {availableAmenities.map((a) => (
                             <label key={a.id} className="flex items-start gap-2 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-gray-200">
                               <input type="checkbox" className="mt-1 rounded text-campus-600 focus:ring-campus-500" checked={form.amenityIds.includes(a.id)} onChange={() => toggleAmenity(a.id)} />
@@ -490,25 +555,25 @@ export default function FacilitiesPage() {
                   <table className="w-full text-left">
                     <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/50">
-                      {['Image', 'ID', 'Name', 'Features', 'Capacity', 'Location', 'Availability', 'Status', 'Actions'].map((h) => (
+                      {['Name', 'Type', 'Features', 'Capacity', 'Location', 'Availability', 'Status'].map((h) => (
                           <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                     </thead>
                     <tbody>
                     {resources.map((r) => (
-                        <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
-                          <td className="px-5 py-4">
-                            {r.imageUrl ? (
-                              <img src={r.imageUrl} alt={r.name} className="w-10 h-10 object-cover rounded-lg border border-gray-100 shadow-sm" />
-                            ) : (
-                              <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-[10px] text-gray-400 font-medium border border-gray-100">N/A</div>
-                            )}
-                          </td>
-                          <td className="px-5 py-4 text-sm font-mono text-gray-500">#{r.id}</td>
-                          <td className="px-5 py-4 text-sm font-semibold text-campus-800">
+                        <tr 
+                          key={r.id} 
+                          onClick={() => handleRowClick(r)}
+                          className="border-b border-gray-50 hover:bg-campus-50/50 transition-colors cursor-pointer group"
+                        >
+                          <td className="px-5 py-4 text-sm font-semibold text-campus-800 group-hover:text-campus-900">
                             {r.name}
-                            <div className="text-[11px] text-gray-400 mt-0.5">{typeLabels[r.type] || r.type}</div>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-gray-600">
+                            <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-xs font-medium text-gray-600">
+                              {typeLabels[r.type] || r.type}
+                            </span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-1.5 max-w-[180px]">
@@ -529,21 +594,15 @@ export default function FacilitiesPage() {
                           <td className="px-5 py-4 text-sm text-gray-600">{r.location || '—'}</td>
                           <td className="px-5 py-4 text-sm text-gray-500">{r.availabilityWindows || '—'}</td>
                           <td className="px-5 py-4">
-                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-md ${statusStyle[r.status]}`}>
-                          {r.status.replace(/_/g, ' ')}
-                        </span>
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openEdit(r)} className="text-sm font-semibold text-campus-600 hover:text-campus-800 transition-colors">Edit</button>
-                              <button onClick={() => setDeleteConfirm(r)} className="text-sm font-semibold text-red-500 hover:text-red-700 transition-colors">Delete</button>
-                            </div>
+                            <span className={`px-2.5 py-1 text-[10px] font-bold rounded-md ${statusStyle[r.status]}`}>
+                              {r.status.replace(/_/g, ' ')}
+                            </span>
                           </td>
                         </tr>
                     ))}
                     {resources.length === 0 && (
                         <tr>
-                          <td colSpan={9} className="px-5 py-16 text-center">
+                          <td colSpan={7} className="px-5 py-16 text-center">
                             <div className="flex flex-col items-center justify-center">
                               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
                                 <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
@@ -565,6 +624,17 @@ export default function FacilitiesPage() {
               </div>
           )}
         </div>
+
+        <FacilityDetailModal 
+          isOpen={!!selectedFacility}
+          onClose={() => setSelectedFacility(null)}
+          resource={selectedFacility}
+          mode="edit"
+          onEdit={openEdit}
+          onDelete={(r) => { setDeleteConfirm(r); setSelectedFacility(null); }}
+          availableAssets={availableAssets}
+          availableAmenities={availableAmenities}
+        />
       </AppLayout>
   );
 }
