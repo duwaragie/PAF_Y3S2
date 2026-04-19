@@ -65,6 +65,7 @@ public class TicketController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteTicket(
             @PathVariable Long id,
             Authentication authentication) {

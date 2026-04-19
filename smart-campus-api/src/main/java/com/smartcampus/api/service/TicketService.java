@@ -141,9 +141,8 @@ public class TicketService {
     }
 
     public void deleteTicket(Long id, User currentUser) {
-        Role role = currentUser.getRole();
-        if (role != Role.ADMIN && role != Role.TECHNICAL_STAFF) {
-            throw new AccessDeniedException("Only technicians and admins can delete tickets");
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only admins can delete tickets");
         }
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new TicketNotFoundException(id));
@@ -157,9 +156,8 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException(ticketId));
 
-        Role role = currentUser.getRole();
-        if (role == Role.STUDENT || role == Role.LECTURER) {
-            throw new AccessDeniedException("Only technicians and admins can manage ticket images");
+        if (currentUser.getRole() == Role.STUDENT && !ticket.getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You can only upload images to your own tickets");
         }
 
         long imageCount = ticketImageRepository.countByTicket(ticket);
@@ -202,12 +200,15 @@ public class TicketService {
     }
 
     public void deleteImage(Long ticketId, Long imageId, User currentUser) {
-        Role deleteRole = currentUser.getRole();
-        if (deleteRole == Role.STUDENT || deleteRole == Role.LECTURER) {
-            throw new AccessDeniedException("Only technicians and admins can manage ticket images");
-        }
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException(ticketId));
         TicketImage image = ticketImageRepository.findById(imageId)
                 .orElseThrow(() -> new RuntimeException("Image not found with id: " + imageId));
+
+        if (currentUser.getRole() == Role.STUDENT && !ticket.getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You can only delete images from your own tickets");
+        }
+
         deleteImageFile(image.getStoredFileName(), ticketId);
         ticketImageRepository.delete(image);
     }
@@ -221,12 +222,13 @@ public class TicketService {
     }
 
     public TicketCommentResponseDTO addComment(Long ticketId, TicketCommentRequestDTO dto, User currentUser) {
-        Role role = currentUser.getRole();
-        if (role == Role.STUDENT || role == Role.LECTURER) {
-            throw new AccessDeniedException("Only technicians and admins can add comments");
-        }
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException(ticketId));
+
+        if (currentUser.getRole() == Role.STUDENT && !ticket.getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You can only comment on your own tickets");
+        }
+
         TicketComment comment = TicketComment.builder()
                 .ticket(ticket)
                 .author(currentUser)
@@ -236,16 +238,14 @@ public class TicketService {
     }
 
     public TicketCommentResponseDTO editComment(Long ticketId, Long commentId, TicketCommentRequestDTO dto, User currentUser) {
-        Role role = currentUser.getRole();
-        if (role == Role.STUDENT || role == Role.LECTURER) {
-            throw new AccessDeniedException("Only technicians and admins can edit comments");
-        }
         ticketRepository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
         TicketComment comment = ticketCommentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
+
         if (!comment.getAuthor().getId().equals(currentUser.getId())) {
             throw new AccessDeniedException("You can only edit your own comments");
         }
+
         comment.setContent(dto.getContent());
         return convertCommentToDTO(ticketCommentRepository.save(comment));
     }
