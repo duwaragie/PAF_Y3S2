@@ -66,3 +66,5 @@ app:
     admin-password: ${SEED_ADMIN_PASSWORD:Admin@1234!}
     admin-name: ${SEED_ADMIN_NAME:Academic Curator Admin}
     admin-employee-id: ${SEED_ADMIN_EMPLOYEE_ID:EMP-0001}
+  upload:
+    tickets-dir: ./uploads/tickets

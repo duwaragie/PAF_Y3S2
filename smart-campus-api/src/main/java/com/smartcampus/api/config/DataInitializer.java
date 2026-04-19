@@ -58,6 +58,8 @@ public class DataInitializer implements ApplicationRunner {
     private void seedUser(String email, String name, String rawPassword, Role role,
                           String studentRegNo, String employeeId) {
         if (userRepository.findByEmail(email).isPresent()) return;
+        if (studentRegNo != null && userRepository.existsByStudentRegistrationNumber(studentRegNo)) return;
+        if (employeeId != null && userRepository.existsByEmployeeId(employeeId)) return;
 
         User user = new User();
         user.setEmail(email);
