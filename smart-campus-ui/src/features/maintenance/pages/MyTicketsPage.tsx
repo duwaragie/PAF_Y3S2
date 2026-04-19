@@ -60,6 +60,8 @@ export default function MyTicketsPage() {
   const user = useAuthStore(s => s.user);
   const isLecturer = user?.role === 'TECHNICAL_STAFF';
   const canSeeAllTickets = user?.role === 'TECHNICAL_STAFF' || user?.role === 'LECTURER';
+  const canManageImages = user?.role === 'TECHNICAL_STAFF' || user?.role === 'ADMIN';
+  const canComment = user?.role === 'TECHNICAL_STAFF' || user?.role === 'ADMIN';
 
   const [tickets, setTickets] = useState<TicketDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -570,7 +572,7 @@ export default function MyTicketsPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-semibold text-gray-400 uppercase">Images ({selected.imageIds.length}/3)</p>
-                  {selected.createdById === user?.id && selected.imageIds.length < 3 && (
+                  {canManageImages && selected.imageIds.length < 3 && (
                     <>
                       <button
                         onClick={() => fileRef.current?.click()}
@@ -588,13 +590,14 @@ export default function MyTicketsPage() {
                 ) : (
                   <div className="flex gap-3 flex-wrap">
                     {selected.imageIds.map(id => (
-                      <AuthImage key={id} imageId={id} canDelete={selected.createdById === user?.id} onDelete={handleDeleteImage} />
+                      <AuthImage key={id} imageId={id} canDelete={canManageImages} onDelete={handleDeleteImage} />
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Comments */}
+              {/* Comments — Technical Staff and Admin only */}
+              {canComment && (
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Comments ({selected.comments.length})</p>
                 <div className="space-y-3 mb-4">
@@ -648,6 +651,7 @@ export default function MyTicketsPage() {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>
