@@ -2,7 +2,6 @@ package com.smartcampus.api.controller;
 
 import com.smartcampus.api.dto.BookingDTO;
 import com.smartcampus.api.dto.CreateBookingRequest;
-import com.smartcampus.api.dto.ApproveBookingRequest;
 import com.smartcampus.api.dto.RejectBookingRequest;
 import com.smartcampus.api.model.BookingStatus;
 import com.smartcampus.api.model.User;

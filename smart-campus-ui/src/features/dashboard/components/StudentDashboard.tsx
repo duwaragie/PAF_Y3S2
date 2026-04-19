@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { bookingService, type BookingDTO } from '@/services/bookingService';
 import { dashboardService, type StudentDashboardSummary } from '@/services/dashboardService';
+import { ticketService, type TicketDTO } from '@/services/ticketService';
+import { notificationService } from '@/services/notificationService';
 
 export default function StudentDashboard() {
   const user = useAuthStore((s) => s.user);
   const [bookings, setBookings] = useState<BookingDTO[]>([]);
   const [academics, setAcademics] = useState<StudentDashboardSummary | null>(null);
+  const [tickets, setTickets] = useState<TicketDTO[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     // Pull a larger page so we can split by status client-side for dashboard stats.
@@ -17,6 +21,12 @@ export default function StudentDashboard() {
     dashboardService.studentSummary()
       .then((res) => setAcademics(res.data))
       .catch(() => setAcademics(null));
+    ticketService.getAll()
+      .then((res) => setTickets(res.data))
+      .catch(() => setTickets([]));
+    notificationService.unreadCount()
+      .then((res) => setUnreadNotifications(res.data.count))
+      .catch(() => setUnreadNotifications(0));
   }, []);
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'PENDING').length, [bookings]);
@@ -26,6 +36,10 @@ export default function StudentDashboard() {
       .filter((b) => b.status === 'APPROVED' && new Date(b.startTime) > now)
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   }, [bookings]);
+  const openTickets = useMemo(
+    () => tickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length,
+    [tickets],
+  );
 
   const stats = [
     {
@@ -111,6 +125,48 @@ export default function StudentDashboard() {
               color: 'bg-purple-50 text-purple-700',
               iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
               link: '/transcript',
+            },
+          ].map((stat) => (
+            <Link
+              to={stat.link}
+              key={stat.label}
+              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-soft transition-shadow"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-9 h-9 rounded-xl ${stat.color} flex items-center justify-center`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={stat.iconPath} />
+                  </svg>
+                </div>
+                <span className="text-2xl font-extrabold text-campus-900">{stat.value}</span>
+              </div>
+              <p className="text-xs font-semibold text-campus-800">{stat.label}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">{stat.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Campus Services */}
+      <div>
+        <h2 className="text-sm font-bold text-campus-900 mb-3 uppercase tracking-wider text-[11px]">Campus Services</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            {
+              label: 'My Tickets',
+              value: String(tickets.length),
+              desc: `${openTickets} open or in progress.`,
+              color: 'bg-rose-50 text-rose-700',
+              iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+              link: '/maintenance/tickets',
+            },
+            {
+              label: 'Unread Notifications',
+              value: String(unreadNotifications),
+              desc: 'New alerts awaiting your review.',
+              color: 'bg-blue-50 text-blue-700',
+              iconPath: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
+              link: '/notifications',
             },
           ].map((stat) => (
             <Link

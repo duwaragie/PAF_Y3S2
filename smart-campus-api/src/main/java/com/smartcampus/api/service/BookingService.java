@@ -2,8 +2,6 @@ package com.smartcampus.api.service;
 
 import com.smartcampus.api.dto.BookingDTO;
 import com.smartcampus.api.dto.CreateBookingRequest;
-import com.smartcampus.api.dto.ApproveBookingRequest;
-import com.smartcampus.api.dto.RejectBookingRequest;
 import com.smartcampus.api.event.BookingEvents;
 import com.smartcampus.api.exception.ResourceNotFoundException;
 import com.smartcampus.api.exception.BadRequestException;

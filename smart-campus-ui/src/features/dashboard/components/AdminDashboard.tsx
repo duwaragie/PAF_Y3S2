@@ -4,6 +4,10 @@ import { useAuthStore } from '@/store/authStore';
 import { adminService, type UserDTO } from '@/services/adminService';
 import { bookingService, type BookingDTO } from '@/services/bookingService';
 import { resourceService, type ResourceDTO } from '@/services/resourceService';
+import { ticketService, type TicketDTO } from '@/services/ticketService';
+import { announcementService, type ScheduledAnnouncementDTO } from '@/services/announcementService';
+import { courseOfferingService, type CourseOfferingDTO } from '@/services/courseOfferingService';
+import { assetService, type AssetDTO } from '@/services/assetService';
 
 export default function AdminDashboard() {
   const user = useAuthStore((s) => s.user);
@@ -11,6 +15,10 @@ export default function AdminDashboard() {
   const [pendingBookings, setPendingBookings] = useState<BookingDTO[]>([]);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [resources, setResources] = useState<ResourceDTO[]>([]);
+  const [tickets, setTickets] = useState<TicketDTO[]>([]);
+  const [announcements, setAnnouncements] = useState<ScheduledAnnouncementDTO[]>([]);
+  const [offerings, setOfferings] = useState<CourseOfferingDTO[]>([]);
+  const [assets, setAssets] = useState<AssetDTO[]>([]);
 
   useEffect(() => {
     adminService.getAllUsers().then((res) => setUsers(res.data)).catch(() => {});
@@ -21,15 +29,29 @@ export default function AdminDashboard() {
       })
       .catch(() => {});
     resourceService.getAll().then((res) => setResources(res.data)).catch(() => {});
+    ticketService.getAll().then((res) => setTickets(res.data)).catch(() => setTickets([]));
+    announcementService.list().then((res) => setAnnouncements(res.data)).catch(() => setAnnouncements([]));
+    courseOfferingService.list().then((res) => setOfferings(res.data)).catch(() => setOfferings([]));
+    assetService.getAll().then((res) => setAssets(res.data)).catch(() => setAssets([]));
   }, []);
 
   const activeFacilities = resources.filter((r) => r.status === 'ACTIVE').length;
+  const openTickets = tickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
+  const scheduledAnnouncements = announcements.filter((a) => !a.sentAt).length;
+  const openOfferings = offerings.filter((o) => o.status === 'OPEN').length;
 
   const stats = [
     { label: 'Total Users', value: String(users.length), desc: 'Registered accounts across all roles.', color: 'bg-campus-50 text-campus-700' },
     { label: 'Pending Bookings', value: String(pendingTotal), desc: 'Booking requests awaiting approval.', color: 'bg-amber-50 text-amber-700' },
     { label: 'Active Facilities', value: `${activeFacilities}/${resources.length}`, desc: 'Facilities currently bookable.', color: 'bg-emerald-50 text-emerald-700' },
     { label: 'System Health', value: 'OK', desc: 'All services running normally.', color: 'bg-blue-50 text-blue-700' },
+  ];
+
+  const moduleStats: { label: string; value: string; desc: string; color: string; href: string }[] = [
+    { label: 'Open Tickets', value: String(openTickets), desc: `${tickets.length} total in the system.`, color: 'bg-rose-50 text-rose-700', href: '/admin/incidents' },
+    { label: 'Scheduled Announcements', value: String(scheduledAnnouncements), desc: `${announcements.length} total announcements logged.`, color: 'bg-indigo-50 text-indigo-700', href: '/admin/notifications' },
+    { label: 'Course Offerings', value: `${openOfferings}/${offerings.length}`, desc: 'Offerings open for enrollment.', color: 'bg-purple-50 text-purple-700', href: '/admin/course-offerings' },
+    { label: 'Managed Assets', value: String(assets.length), desc: 'Assets in the inventory catalog.', color: 'bg-sky-50 text-sky-700', href: '/admin/assets' },
   ];
 
   const quickActions = [
@@ -72,6 +94,31 @@ export default function AdminDashboard() {
             <p className="text-xs text-gray-400 mt-0.5">{stat.desc}</p>
           </div>
         ))}
+      </div>
+
+      {/* Module Overview */}
+      <div>
+        <h2 className="text-sm font-bold text-campus-900 mb-3 uppercase tracking-wider text-[11px]">Modules</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {moduleStats.map((stat) => (
+            <Link
+              key={stat.label}
+              to={stat.href}
+              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-soft transition-shadow"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-10 h-10 rounded-xl ${stat.color} flex items-center justify-center`}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                </div>
+                <span className="text-2xl font-extrabold text-campus-900">{stat.value}</span>
+              </div>
+              <p className="text-sm font-semibold text-campus-800">{stat.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{stat.desc}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Quick Actions */}

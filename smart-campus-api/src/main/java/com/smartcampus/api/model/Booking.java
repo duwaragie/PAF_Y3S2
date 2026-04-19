@@ -44,6 +44,7 @@ public class Booking {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
     
     @Column(length = 500)

@@ -46,7 +46,7 @@ export function AuthLayout({
             <h1 className="text-[2.75rem] xl:text-5xl font-extrabold text-white leading-[1.1] tracking-tight">
               {heading}
             </h1>
-            <p className="text-campus-300 text-[15px] leading-relaxed max-w-[400px]">
+            <p className="text-white text-[15px] leading-relaxed max-w-[400px]">
               {subheading}
             </p>
 
