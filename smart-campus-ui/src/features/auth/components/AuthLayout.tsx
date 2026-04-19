@@ -27,13 +27,13 @@ export function AuthLayout({
     <div className="min-h-screen flex bg-[#f0f2f5]">
       {/* Left brand panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#0c1f3a] relative overflow-hidden flex-col">
-        {/* Geometric pattern background */}
+        {/* Hero image background */}
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-40"
-          style={{ backgroundImage: "url('/geometric-bg.png')" }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/university-students.jpg')" }}
         />
-        {/* Gradient overlay, subtle so geometric pattern shows through */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1f3a]/60 via-[#0f2847]/40 to-[#132d4f]/30" />
+        {/* Readability overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1f3a]/70 via-[#0c1f3a]/50 to-[#0c1f3a]/40" />
 
         <div className="relative z-10 flex flex-col justify-between h-full p-10 xl:p-12">
           {/* Logo */}
@@ -88,7 +88,7 @@ export function AuthLayout({
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-gradient-to-br from-white via-campus-50 to-campus-100">
         <div className="flex-1 flex justify-center px-6 sm:px-10 pt-20 sm:pt-24 pb-10">
           <div className="w-full max-w-[440px] animate-slide-up">
             {/* Mobile logo */}
