@@ -32,6 +32,7 @@ import TranscriptPage from './features/academics/pages/TranscriptPage';
 import UserNotificationsPage from './features/academics/pages/NotificationsPage';
 import { BookingPage, AdminBookingPage } from './features/booking';
 import MyTicketsPage from './features/maintenance/pages/MyTicketsPage';
+import TechnicianDashboardPage from './features/technician/pages/TechnicianDashboardPage';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -125,6 +126,7 @@ function App() {
       <Route path="/admin/amenities" element={<RoleRoute roles={['ADMIN']}><AmenitiesAdminPage /></RoleRoute>} />
       <Route path="/admin/bookings" element={<RoleRoute roles={['ADMIN']}><AdminBookingPage /></RoleRoute>} />
       <Route path="/maintenance/tickets" element={<ProtectedRoute><MyTicketsPage /></ProtectedRoute>} />
+      <Route path="/technician/dashboard" element={<RoleRoute roles={['TECHNICAL_STAFF']}><TechnicianDashboardPage /></RoleRoute>} />
       <Route path="/admin/incidents" element={<RoleRoute roles={['ADMIN']}><IncidentsPage /></RoleRoute>} />
       <Route path="/admin/notifications" element={<RoleRoute roles={['ADMIN']}><NotificationsPage /></RoleRoute>} />
 
