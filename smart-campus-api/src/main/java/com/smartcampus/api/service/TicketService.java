@@ -29,6 +29,7 @@ public class TicketService {
     private final TicketImageRepository ticketImageRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuditService auditService;
 
     @Value("${app.upload.tickets-dir:./uploads/tickets}")
     private String uploadDir;
@@ -93,6 +94,8 @@ public class TicketService {
         Ticket saved = ticketRepository.save(ticket);
         eventPublisher.publishEvent(
                 new TicketEvents.TicketStatusChanged(saved, previousStatus, currentUser.getId()));
+        auditService.log(currentUser, AuditAction.TICKET_STATUS_CHANGED, "TICKET", String.valueOf(saved.getId()),
+                previousStatus + " -> " + saved.getStatus());
         return convertToDTO(saved);
     }
 
@@ -148,6 +151,8 @@ public class TicketService {
         ticket.setAssignedAt(LocalDateTime.now());
         Ticket saved = ticketRepository.save(ticket);
         eventPublisher.publishEvent(new TicketEvents.TicketAssigned(saved, currentUser.getId()));
+        auditService.log(currentUser, AuditAction.TICKET_ASSIGNED, "TICKET", String.valueOf(saved.getId()),
+                "assignee=" + assignee.getEmail());
         return convertToDTO(saved);
     }
 

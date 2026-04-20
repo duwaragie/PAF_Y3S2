@@ -1,10 +1,12 @@
 package com.smartcampus.api.security;
 
+import com.smartcampus.api.model.AuditAction;
 import com.smartcampus.api.model.AuthProvider;
 import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.repository.AccountSetupTokenRepository;
 import com.smartcampus.api.repository.UserRepository;
+import com.smartcampus.api.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -23,6 +25,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
     private final AccountSetupTokenRepository accountSetupTokenRepository;
+    private final AuditService auditService;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -53,6 +56,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // Allowing it would silently bypass the setup flow and mark the email verified
         // without the user ever setting a password.
         if (accountSetupTokenRepository.existsByUser(existingUser)) {
+            auditService.log(existingUser, AuditAction.OAUTH_BLOCKED, "USER", String.valueOf(existingUser.getId()),
+                    "pending account setup");
             throw new OAuth2AuthenticationException(new OAuth2Error(
                     "setup_required",
                     "Please complete your account setup via the invitation email before signing in with Google.",
@@ -83,6 +88,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         User saved = userRepository.save(existingUser);
         log.info("OAuth linked existing user id={} role={} provider={}", saved.getId(), saved.getRole(), saved.getAuthProvider());
+        auditService.log(saved, AuditAction.OAUTH_LINKED, "USER", String.valueOf(saved.getId()),
+                "role=" + saved.getRole() + " provider=" + saved.getAuthProvider());
         return saved;
     }
 
@@ -97,6 +104,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         newUser.setEmailVerified(true);
         User saved = userRepository.save(newUser);
         log.info("OAuth created new user id={} role=STUDENT", saved.getId());
+        auditService.log(saved, AuditAction.OAUTH_SIGNUP, "USER", String.valueOf(saved.getId()), "new student via Google");
         return saved;
     }
 }

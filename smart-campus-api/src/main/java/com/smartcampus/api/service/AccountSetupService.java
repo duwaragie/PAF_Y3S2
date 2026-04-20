@@ -3,6 +3,7 @@ package com.smartcampus.api.service;
 import com.smartcampus.api.dto.AccountSetupCompleteRequest;
 import com.smartcampus.api.dto.AccountSetupValidationResponse;
 import com.smartcampus.api.model.AccountSetupToken;
+import com.smartcampus.api.model.AuditAction;
 import com.smartcampus.api.model.AuthProvider;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.repository.AccountSetupTokenRepository;
@@ -29,6 +30,7 @@ public class AccountSetupService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -51,6 +53,8 @@ public class AccountSetupService {
         String base = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
         String setupUrl = base + "/account-setup?token=" + rawToken;
         emailService.sendAccountInviteEmail(user.getEmail(), user.getName(), user.getRole().name(), setupUrl, EXPIRY_HOURS);
+        auditService.logCurrent(AuditAction.ACCOUNT_INVITED, "USER", String.valueOf(user.getId()),
+                "email=" + user.getEmail() + " role=" + user.getRole());
         return setupUrl;
     }
 
@@ -73,6 +77,8 @@ public class AccountSetupService {
         userRepository.save(user);
         setupTokenRepository.delete(token);
         log.info("Account setup completed for user id={} role={}", user.getId(), user.getRole());
+        auditService.log(user, AuditAction.ACCOUNT_SETUP_COMPLETED, "USER", String.valueOf(user.getId()),
+                "role=" + user.getRole());
     }
 
     private AccountSetupToken findValidTokenOrThrow(String rawToken) {

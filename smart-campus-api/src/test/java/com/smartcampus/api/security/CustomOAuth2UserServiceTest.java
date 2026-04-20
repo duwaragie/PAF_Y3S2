@@ -5,6 +5,7 @@ import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.repository.AccountSetupTokenRepository;
 import com.smartcampus.api.repository.UserRepository;
+import com.smartcampus.api.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,9 @@ class CustomOAuth2UserServiceTest {
 
     @Mock
     AccountSetupTokenRepository accountSetupTokenRepository;
+
+    @Mock
+    AuditService auditService;
 
     @InjectMocks
     CustomOAuth2UserService service;

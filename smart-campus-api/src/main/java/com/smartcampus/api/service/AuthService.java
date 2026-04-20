@@ -2,6 +2,7 @@ package com.smartcampus.api.service;
 
 import com.smartcampus.api.dto.LoginRequest;
 import com.smartcampus.api.dto.RegisterRequest;
+import com.smartcampus.api.model.AuditAction;
 import com.smartcampus.api.model.AuthProvider;
 import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
@@ -10,6 +11,7 @@ import com.smartcampus.api.security.JwtService;
 import com.smartcampus.api.security.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserService userService;
+    private final AuditService auditService;
 
     @Transactional
     public void register(RegisterRequest request) {
@@ -89,24 +92,35 @@ public class AuthService {
 
     public Map<String, Object> login(LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("No account found with this email address."));
+                .orElseThrow(() -> {
+                    auditService.log(null, request.getEmail(), AuditAction.LOGIN_FAILURE, "USER", null, "unknown email");
+                    return new RuntimeException("No account found with this email address.");
+                });
 
         if (!user.isEmailVerified()) {
+            auditService.log(user, AuditAction.LOGIN_FAILURE, "USER", String.valueOf(user.getId()), "email not verified");
             throw new RuntimeException("Email not verified. Please verify your email first.");
         }
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+        } catch (AuthenticationException ex) {
+            auditService.log(user, AuditAction.LOGIN_FAILURE, "USER", String.valueOf(user.getId()), "bad password");
+            throw ex;
+        }
 
         String jwt = jwtService.generateToken(user);
         String refreshToken = refreshTokenService.createRefreshToken(user.getId()).getToken();
+
+        auditService.log(user, AuditAction.LOGIN_SUCCESS, "USER", String.valueOf(user.getId()), "role=" + user.getRole());
 
         Map<String, Object> response = new HashMap<>();
         response.put("accessToken", jwt);
         response.put("refreshToken", refreshToken);
         response.put("type", "Bearer");
-        
+
         response.put("user", userService.convertToDTO(user));
 
         return response;

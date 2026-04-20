@@ -34,6 +34,7 @@ public class BookingService {
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuditService auditService;
 
     /**
      * Create a new booking request
@@ -202,6 +203,8 @@ public class BookingService {
         }
 
         eventPublisher.publishEvent(new BookingEvents.BookingApproved(booking, adminId));
+        auditService.log(admin, AuditAction.BOOKING_APPROVED, "BOOKING", String.valueOf(booking.getId()),
+                "resource=" + booking.getResource().getName() + " user=" + booking.getUser().getEmail());
         return convertToDTO(booking);
     }
 
@@ -300,6 +303,8 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
         eventPublisher.publishEvent(new BookingEvents.BookingRejected(booking, adminId, rejectionReason));
+        auditService.log(admin, AuditAction.BOOKING_REJECTED, "BOOKING", String.valueOf(booking.getId()),
+                "reason=" + rejectionReason);
         return convertToDTO(booking);
     }
 
@@ -335,6 +340,7 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
         eventPublisher.publishEvent(new BookingEvents.BookingCancelled(booking, userId, null));
+        auditService.log(user, AuditAction.BOOKING_CANCELLED, "BOOKING", String.valueOf(booking.getId()), "self-cancel");
         return convertToDTO(booking);
     }
 
