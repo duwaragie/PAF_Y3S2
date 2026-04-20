@@ -28,27 +28,35 @@ function PolylineRenderer({
   const polylineRef = useRef<google.maps.Polyline | null>(null);
 
   useEffect(() => {
-    if (!map || !window.google || !geometryLib) {
-      console.log('Waiting for map or geometry library...', { hasMap: !!map, hasGoogle: !!window.google, hasGeometry: !!geometryLib });
-      return;
-    }
+    if (!map || !window.google) return;
 
-    console.log('Rendering polyline for route:', route.name);
-
-    // Decode the polyline string
     let path: any[] = [];
-    try {
-      if (route.polyline && route.polyline.trim() !== '') {
-        path = geometryLib.encoding.decodePath(route.polyline);
-        console.log(`Successfully decoded ${path.length} points for route:`, route.name);
+    
+    // Try to decode the polyline if the library is loaded and string is provided
+    if (geometryLib && route.polyline && route.polyline.trim() !== '') {
+      try {
+        const decoded = geometryLib.encoding.decodePath(route.polyline);
+        
+        // Validate that the decoded path is actually near the origin marker
+        if (decoded.length > 0) {
+          const firstPoint = decoded[0];
+          const latDiff = Math.abs(firstPoint.lat() - route.originLat);
+          const lngDiff = Math.abs(firstPoint.lng() - route.originLng);
+          
+          // If it's within roughly ~111km (1 degree), we accept it
+          if (latDiff < 1 && lngDiff < 1) {
+            path = decoded;
+          } else {
+            console.warn(`Polyline for route ${route.name} seems invalid or far from origin. Using fallback.`);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to decode polyline for route', route.id, e);
       }
-    } catch (e) {
-      console.error('Failed to decode polyline for route', route.id, e);
     }
 
+    // Fallback to a straight line if decoding failed, library missing, or data was garbage
     if (path.length === 0) {
-      console.log('Falling back to straight line for route:', route.name);
-      // Fallback to straight line using plain objects
       path = [
         { lat: route.originLat, lng: route.originLng },
         { lat: route.destLat, lng: route.destLng }
@@ -67,16 +75,12 @@ function PolylineRenderer({
     });
 
     if (onClick) {
-      polyline.addListener('click', () => {
-        onClick();
-      });
+      polyline.addListener('click', () => onClick());
       polyline.addListener('mouseover', () => {
         polyline.setOptions({ strokeOpacity: 1.0, strokeWeight: 6 });
       });
       polyline.addListener('mouseout', () => {
-        if (!isSelected) {
-          polyline.setOptions({ strokeOpacity: 0.6, strokeWeight: 4 });
-        }
+        if (!isSelected) polyline.setOptions({ strokeOpacity: 0.6, strokeWeight: 4 });
       });
     }
 
@@ -97,40 +101,41 @@ function MapBoundsController({ routes, selectedRouteId }: { routes: ShuttleRoute
   const geometryLib = useMapsLibrary('geometry');
 
   useEffect(() => {
-    if (!map || !window.google || !geometryLib || routes.length === 0) return;
+    if (!map || !window.google || routes.length === 0) return;
 
     const bounds = new google.maps.LatLngBounds();
     let hasValidPoints = false;
 
-    if (selectedRouteId) {
-      // Zoom to specific route
-      const route = routes.find(r => r.id === selectedRouteId);
-      if (route) {
-        bounds.extend({ lat: route.originLat, lng: route.originLng });
-        bounds.extend({ lat: route.destLat, lng: route.destLng });
+    const processRoute = (route: ShuttleRouteDTO) => {
+      bounds.extend({ lat: route.originLat, lng: route.originLng });
+      bounds.extend({ lat: route.destLat, lng: route.destLng });
+      hasValidPoints = true;
+
+      if (geometryLib && route.polyline && route.polyline.trim() !== '') {
         try {
-          if (route.polyline && route.polyline.trim() !== '') {
-            const path = geometryLib.encoding.decodePath(route.polyline);
-            path.forEach(p => bounds.extend(p));
+          const decoded = geometryLib.encoding.decodePath(route.polyline);
+          if (decoded.length > 0) {
+            const firstPoint = decoded[0];
+            if (Math.abs(firstPoint.lat() - route.originLat) < 1 && Math.abs(firstPoint.lng() - route.originLng) < 1) {
+              decoded.forEach(p => bounds.extend(p));
+            }
           }
         } catch (e) {
           // ignore
         }
-        hasValidPoints = true;
       }
+    };
+
+    if (selectedRouteId) {
+      const route = routes.find(r => r.id === selectedRouteId);
+      if (route) processRoute(route);
     } else {
-      // Zoom to all routes
-      routes.forEach(route => {
-        bounds.extend({ lat: route.originLat, lng: route.originLng });
-        bounds.extend({ lat: route.destLat, lng: route.destLng });
-        hasValidPoints = true;
-      });
+      routes.forEach(processRoute);
     }
 
     if (hasValidPoints) {
       map.fitBounds(bounds);
       
-      // Add some padding
       const listener = google.maps.event.addListener(map, 'idle', () => {
         if (map.getZoom() && map.getZoom()! > 14) {
           map.setZoom(14);
@@ -166,7 +171,6 @@ export default function ShuttleMapView({
     );
   }
 
-  // Determine which routes to show. If a route is selected, maybe we want to fade others, but here we just pass isSelected to the renderer
   return (
     <APIProvider apiKey={apiKey} libraries={['geometry']}>
       <div className="w-full h-full min-h-[300px] rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative">
@@ -187,7 +191,7 @@ export default function ShuttleMapView({
           ))}
 
           {!hideMarkers && routes.map(route => {
-            const isSelected = selectedRouteId === route.id || selectedRouteId == null; // Show all if none selected, or only selected if one is selected
+            const isSelected = selectedRouteId === route.id || selectedRouteId == null;
             if (!isSelected) return null;
 
             return (
