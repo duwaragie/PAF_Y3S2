@@ -3,6 +3,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import ShuttleMapView from '@/features/shuttle/components/ShuttleMapView';
 import { shuttleService, type ShuttleRouteDTO } from '@/services/shuttleService';
 import { useShuttleStore } from '@/store/shuttleStore';
+import { useMapsLibrary } from '@vis.gl/react-google-maps';
 import {
   Table,
   TableBody,
@@ -28,6 +29,60 @@ const emptyForm: FormState = {
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
+
+function PolylineGenerator() {
+  const routesLib = useMapsLibrary('routes');
+  const geometryLib = useMapsLibrary('geometry');
+  const [results, setResults] = useState<{name: string, polyline: string}[]>([]);
+
+  useEffect(() => {
+    if (!routesLib || !geometryLib) return;
+
+    const directionsService = new routesLib.DirectionsService();
+    const locations = [
+      { origin: {lat: 6.9100, lng: 79.8500}, dest: {lat: 6.9147, lng: 79.9723}, name: 'Kollupitiya' },
+      { origin: {lat: 6.7132, lng: 79.9026}, dest: {lat: 6.9147, lng: 79.9723}, name: 'Panadura' },
+      { origin: {lat: 7.2084, lng: 79.8380}, dest: {lat: 6.9147, lng: 79.9723}, name: 'Negombo' }
+    ];
+
+    locations.forEach(loc => {
+      directionsService.route({
+        origin: loc.origin,
+        destination: loc.dest,
+        travelMode: google.maps.TravelMode.DRIVING
+      }, (response, status) => {
+        if (status === 'OK' && response) {
+          const polyline = response.routes[0].overview_polyline;
+          setResults(prev => {
+            if (prev.find(r => r.name === loc.name)) return prev;
+            return [...prev, { name: loc.name, polyline }];
+          });
+        }
+      });
+    });
+  }, [routesLib, geometryLib]);
+
+  if (results.length === 0) return null;
+
+  return (
+    <div className="absolute bottom-4 right-4 bg-white p-4 rounded-xl shadow-2xl border border-gray-200 z-[100] w-80 max-h-80 overflow-y-auto">
+      <h4 className="text-sm font-bold mb-3 text-campus-900 border-b pb-2">Generated Polylines (Copy these!)</h4>
+      <div className="space-y-4">
+        {results.map(r => (
+          <div key={r.name} className="space-y-1">
+            <p className="text-xs font-bold text-campus-600">{r.name}</p>
+            <textarea 
+              readOnly 
+              value={r.polyline} 
+              className="w-full h-16 text-[10px] font-mono p-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none" 
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminShuttleRoutesPage() {
   const { routes, setRoutes, isLoading, setLoading, error, setError, selectedRoute, setSelectedRoute } = useShuttleStore();
@@ -312,7 +367,7 @@ export default function AdminShuttleRoutesPage() {
                       className={`w-full p-3 rounded-xl border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-campus-200 transition-colors resize-none ${formErrors.polyline ? 'border-red-300 bg-red-50/30' : 'border-gray-200 bg-gray-50/50 focus:bg-white'}`}
                     />
                     {formErrors.polyline && <p className="text-xs text-red-500 mt-1 font-medium">{formErrors.polyline}</p>}
-                    <p className="text-[10px] text-gray-400 mt-1">Paste the `overview_polyline.points` string from Google Directions API.</p>
+                    <p className="text-[10px] text-gray-400 mt-1">Copy the text from the generator on the map and paste here.</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -427,7 +482,7 @@ export default function AdminShuttleRoutesPage() {
           </div>
 
           {/* Right Column: Live Map Preview */}
-          <div className="w-full lg:w-1/2 xl:w-3/5 min-h-[400px] lg:min-h-[600px] sticky top-24">
+          <div className="w-full lg:w-1/2 xl:w-3/5 min-h-[400px] lg:min-h-[600px] sticky top-24 relative">
             <ShuttleMapView 
               routes={previewRoutes} 
               selectedRouteId={showForm ? (editingId || null) : selectedRoute?.id} 
@@ -436,6 +491,8 @@ export default function AdminShuttleRoutesPage() {
                 if (!showForm) setSelectedRoute(route);
               }}
             />
+            {/* The PolylineGenerator displays the routes directly on the screen */}
+            <PolylineGenerator />
           </div>
 
         </div>

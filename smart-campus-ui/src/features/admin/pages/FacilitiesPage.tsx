@@ -195,10 +195,14 @@ export default function FacilitiesPage() {
     setFormErrors({});
     setEditingId(r.id);
     
+    // Set up image state based on existing URL
     setImageFile(null);
     setImagePreviewError(false);
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-    if (r.imageUrl && supabaseUrl && !r.imageUrl.startsWith(supabaseUrl)) {
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const isSupabaseImage = supabaseUrl && r.imageUrl?.startsWith(supabaseUrl);
+    
+    if (r.imageUrl && !isSupabaseImage) {
       setImageUploadMode('url');
       setPastedImageUrl(r.imageUrl);
     } else {
@@ -353,6 +357,8 @@ export default function FacilitiesPage() {
       setDeleting(false);
     }
   };
+
+  const editingResource = editingId ? resources.find(r => r.id === editingId) : null;
 
   return (
       <AppLayout>
@@ -576,12 +582,20 @@ export default function FacilitiesPage() {
                         </div>
 
                         {imageUploadMode === 'upload' ? (
-                          <input
-                            type="file"
-                            accept="image/png, image/jpeg"
-                            onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
-                            className="w-full text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white file:text-campus-700 file:border-gray-200 file:border hover:file:bg-gray-50 cursor-pointer"
-                          />
+                          <div className="space-y-2">
+                            {editingResource?.imageUrl && !imageFile && (
+                              <div className="flex items-center gap-3 p-2 bg-white border border-gray-200 rounded-lg shadow-sm">
+                                <img src={editingResource.imageUrl} alt="Current" className="w-8 h-8 object-cover rounded-md border border-gray-100" />
+                                <span className="text-[10px] text-gray-500 font-medium">Current image</span>
+                              </div>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/png, image/jpeg"
+                              onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                              className="w-full text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white file:text-campus-700 file:border-gray-200 file:border hover:file:bg-gray-50 cursor-pointer"
+                            />
+                          </div>
                         ) : (
                           <div className="flex gap-2 items-center">
                             <div className="flex-1">
@@ -730,7 +744,7 @@ export default function FacilitiesPage() {
                   <table className="w-full text-left">
                     <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/50">
-                      {['Image', 'Name', 'Type', 'Features', 'Capacity', 'Availability', 'Status'].map((h) => (
+                      {['Image', 'Name', 'Type', 'Features', 'Capacity', 'Location', 'Availability', 'Status'].map((h) => (
                           <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -790,6 +804,7 @@ export default function FacilitiesPage() {
                           <td className="px-5 py-4 text-sm text-gray-600">
                             {r.capacity ? <span className="font-semibold">{r.capacity} pax</span> : <span className="text-gray-400">—</span>}
                           </td>
+                          <td className="px-5 py-4 text-sm text-gray-600">{r.locationName || '—'}</td>
                           <td className="px-5 py-4 text-[11px] text-gray-600 whitespace-pre-wrap max-w-[200px]">
                             {formatAvailabilitySummary(r.availabilities)}
                           </td>
@@ -803,7 +818,7 @@ export default function FacilitiesPage() {
                     })}
                     {resources.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="px-5 py-16 text-center">
+                          <td colSpan={8} className="px-5 py-16 text-center">
                             <div className="flex flex-col items-center justify-center">
                               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
                                 <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
