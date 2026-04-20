@@ -45,7 +45,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         }
 
         String email = jwtService.extractEmail(token);
-        User user = userRepository.findByEmail(email).orElse(null);
+        User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
         if (user == null) {
             log.debug("STOMP CONNECT rejected: user not found for {}", email);
             return message;

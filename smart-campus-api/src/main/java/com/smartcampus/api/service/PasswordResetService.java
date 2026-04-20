@@ -33,7 +33,7 @@ public class PasswordResetService {
 
     @Transactional
     public void initiatePasswordReset(String email) {
-        Optional<User> userOpt = userRepository.findByEmail(email);
+        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
 
         // Silent on unknown email — prevents account enumeration.
         if (userOpt.isEmpty()) {
@@ -69,7 +69,7 @@ public class PasswordResetService {
 
     @Transactional
     public void resetPassword(String email, String rawToken, String newPassword) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("Invalid reset request."));
 
         PasswordResetToken token = resetTokenRepository.findByUser(user)

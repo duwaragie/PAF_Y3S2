@@ -1,5 +1,6 @@
 package com.smartcampus.api.dto;
 
+import com.smartcampus.api.validation.StrongPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -18,5 +19,6 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank
+    @StrongPassword
     private String password;
 }

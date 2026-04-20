@@ -160,7 +160,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "name", "New User",
                                 "email", "newuser@example.com",
-                                "password", "securepassword123"
+                                "password", "SecurePass1!"
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").exists());
@@ -173,7 +173,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "name", "Another User",
                                 "email", "test@example.com",
-                                "password", "securepassword123"
+                                "password", "SecurePass1!"
                         ))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").exists());

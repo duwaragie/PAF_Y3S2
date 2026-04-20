@@ -33,7 +33,7 @@ public class AuthService {
 
     @Transactional
     public void register(RegisterRequest request) {
-        Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
+        Optional<User> existingUserOpt = userRepository.findByEmailIgnoreCase(request.getEmail());
 
         User user;
         String hashedPassword = passwordEncoder.encode(request.getPassword());
@@ -60,7 +60,7 @@ public class AuthService {
     }
 
     public void verifyEmail(String email, String otp) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.isEmailVerified() && user.getAuthProvider() == AuthProvider.LOCAL) {
@@ -88,7 +88,7 @@ public class AuthService {
     }
 
     public Map<String, Object> login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("No account found with this email address."));
 
         if (!user.isEmailVerified()) {
