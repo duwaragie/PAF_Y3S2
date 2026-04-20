@@ -107,4 +107,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND b.requestedAt < :cutoffTime " +
            "ORDER BY b.requestedAt ASC")
     List<Booking> findOldPendingBookings(@Param("cutoffTime") LocalDateTime cutoffTime);
+    
+    /**
+     * Find APPROVED bookings whose end time has passed (for auto-completion)
+     */
+    @Query("SELECT b FROM Booking b WHERE b.status = ?1 " +
+           "AND b.endTime < ?2 " +
+           "ORDER BY b.endTime DESC")
+    List<Booking> findByStatusAndEndTimeBefore(BookingStatus status, LocalDateTime endTime);
 }

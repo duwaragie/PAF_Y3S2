@@ -67,4 +67,14 @@ public class Booking {
     
     @Column
     private LocalDateTime cancelledAt;
+
+    @Column
+    private LocalDateTime completedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cancelled_by_id")
+    private User cancelledBy;
+
+    @Column(length = 500)
+    private String adminCancelReason;
 }

@@ -29,4 +29,11 @@ public class BookingDTO {
     private LocalDateTime updatedAt;
     private LocalDateTime approvedAt;
     private LocalDateTime cancelledAt;
+    private LocalDateTime completedAt;
+    private Long cancelledById;
+    private String cancelledByName;
+    private String adminCancelReason;
+    private Boolean canEdit;
+    private Boolean canCancel;
+    private Boolean canReview;
 }

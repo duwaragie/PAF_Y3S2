@@ -2,6 +2,9 @@ package com.smartcampus.api.service;
 
 import com.smartcampus.api.dto.BookingDTO;
 import com.smartcampus.api.dto.CreateBookingRequest;
+import com.smartcampus.api.dto.ApproveBookingRequest;
+import com.smartcampus.api.dto.RejectBookingRequest;
+import com.smartcampus.api.dto.ConflictProbeResponse;
 import com.smartcampus.api.event.BookingEvents;
 import com.smartcampus.api.exception.ResourceNotFoundException;
 import com.smartcampus.api.exception.BadRequestException;
@@ -10,15 +13,18 @@ import com.smartcampus.api.repository.BookingRepository;
 import com.smartcampus.api.repository.UserRepository;
 import com.smartcampus.api.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -200,8 +206,8 @@ public class BookingService {
     }
 
     /**
-     * Update a PENDING booking (owner or admin). Re-validates capacity and conflicts.
-     * Status stays PENDING so admin reviews the latest version.
+     * Update a PENDING or REJECTED booking (owner or admin). Re-validates capacity and conflicts.
+     * For REJECTED bookings, resets status to PENDING and clears rejection details.
      */
     public BookingDTO updateBooking(Long bookingId, Long userId, CreateBookingRequest request) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -216,8 +222,9 @@ public class BookingService {
             throw new BadRequestException("You can only edit your own bookings");
         }
 
-        if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new BadRequestException("Only pending bookings can be edited. Current status: " + booking.getStatus());
+        // Allow editing PENDING or REJECTED bookings
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.REJECTED) {
+            throw new BadRequestException("Only pending or rejected bookings can be edited. Current status: " + booking.getStatus());
         }
 
         if (request.getStartTime().isAfter(request.getEndTime())
@@ -256,6 +263,14 @@ public class BookingService {
         booking.setEndTime(request.getEndTime());
         booking.setPurpose(request.getPurpose());
         booking.setExpectedAttendees(request.getExpectedAttendees());
+        
+        // If editing a REJECTED booking, reset to PENDING
+        if (booking.getStatus() == BookingStatus.REJECTED) {
+            booking.setStatus(BookingStatus.PENDING);
+            booking.setRejectionReason(null);
+            booking.setApprovedBy(null);
+            booking.setApprovedAt(null);
+        }
 
         booking = bookingRepository.save(booking);
         return convertToDTO(booking);
@@ -286,22 +301,21 @@ public class BookingService {
     }
 
     /**
-     * Cancel approved booking (User can cancel own bookings, Admin can cancel any)
+     * Cancel booking as the user who owns it (PENDING or APPROVED)
      */
     public BookingDTO cancelBooking(Long bookingId, Long userId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
 
-        // Verify user is either the booking owner or an admin
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        if (!booking.getUser().getId().equals(userId) && !user.getRole().equals(Role.ADMIN)) {
+        // User can only cancel their own bookings
+        if (!booking.getUser().getId().equals(userId)) {
             throw new BadRequestException("You can only cancel your own bookings");
         }
 
-        if (booking.getStatus() != BookingStatus.APPROVED
-                && booking.getStatus() != BookingStatus.PENDING) {
+        if (booking.getStatus() != BookingStatus.APPROVED && booking.getStatus() != BookingStatus.PENDING) {
             throw new BadRequestException("Only pending or approved bookings can be cancelled. Current status: " + booking.getStatus());
         }
 
@@ -314,9 +328,34 @@ public class BookingService {
 
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancelledAt(LocalDateTime.now());
+        booking.setCancelledBy(user);
 
         booking = bookingRepository.save(booking);
         eventPublisher.publishEvent(new BookingEvents.BookingCancelled(booking, userId));
+        return convertToDTO(booking);
+    }
+
+    /**
+     * Cancel booking as admin (APPROVED only) with mandatory reason
+     */
+    public BookingDTO adminCancelBooking(Long bookingId, Long adminId, String reason) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
+
+        User admin = userRepository.findById(adminId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found with id: " + adminId));
+
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            throw new BadRequestException("Only approved bookings can be admin-cancelled. Current status: " + booking.getStatus());
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelledAt(LocalDateTime.now());
+        booking.setCancelledBy(admin);
+        booking.setAdminCancelReason(reason);
+
+        booking = bookingRepository.save(booking);
+        eventPublisher.publishEvent(new BookingEvents.BookingCancelled(booking, adminId));
         return convertToDTO(booking);
     }
 
@@ -332,10 +371,62 @@ public class BookingService {
     }
 
     /**
-     * Convert Booking entity to DTO
+     * Probe for conflicts without creating a booking
+     */
+    @Transactional(readOnly = true)
+    public ConflictProbeResponse getConflicts(Long resourceId, LocalDateTime startTime, LocalDateTime endTime, Long excludeBookingId) {
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(resourceId, startTime, endTime);
+        
+        // Filter out the excluded booking if provided
+        if (excludeBookingId != null) {
+            conflicts = conflicts.stream()
+                    .filter(b -> !b.getId().equals(excludeBookingId))
+                    .toList();
+        }
+        
+        return ConflictProbeResponse.builder()
+                .hasConflict(!conflicts.isEmpty())
+                .count(conflicts.size())
+                .build();
+    }
+
+    /**
+     * Scheduled job to auto-complete approved bookings whose time has passed
+     * Runs every 30 minutes (1800000 milliseconds)
+     */
+    @Scheduled(fixedRate = 1800000)
+    public void autoCompleteBookings() {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            List<Booking> completable = bookingRepository.findByStatusAndEndTimeBefore(BookingStatus.APPROVED, now);
+            
+            for (Booking booking : completable) {
+                booking.setStatus(BookingStatus.COMPLETED);
+                booking.setCompletedAt(now);
+                bookingRepository.save(booking);
+                log.info("Auto-completed booking {} at {}", booking.getId(), now);
+            }
+            
+            if (!completable.isEmpty()) {
+                log.info("Auto-completed {} bookings", completable.size());
+            }
+        } catch (Exception e) {
+            log.error("Error in autoCompleteBookings scheduled task", e);
+        }
+    }
+
+    /**
+     * Convert Booking entity to DTO with permission flags
      */
     private BookingDTO convertToDTO(Booking booking) {
-        return BookingDTO.builder()
+        return convertToDTO(booking, null);
+    }
+
+    /**
+     * Convert Booking entity to DTO with optional authenticated user for permission computation
+     */
+    private BookingDTO convertToDTO(Booking booking, User authenticatedUser) {
+        BookingDTO.BookingDTOBuilder builder = BookingDTO.builder()
                 .id(booking.getId())
                 .userId(booking.getUser().getId())
                 .userName(booking.getUser().getName())
@@ -355,7 +446,52 @@ public class BookingService {
                 .requestedAt(booking.getRequestedAt())
                 .updatedAt(booking.getUpdatedAt())
                 .approvedAt(booking.getApprovedAt())
-                .cancelledAt(booking.getCancelledAt())
-                .build();
+                .completedAt(booking.getCompletedAt());
+
+        // Compute permission flags if authenticated user is provided
+        if (authenticatedUser != null) {
+            boolean isOwner = booking.getUser().getId().equals(authenticatedUser.getId());
+            boolean isAdmin = authenticatedUser.getRole() == Role.ADMIN;
+
+            builder.canEdit(computeCanEdit(booking, isOwner, isAdmin));
+            builder.canCancel(computeCanCancel(booking, isOwner, isAdmin));
+            builder.canReview(isAdmin && booking.getStatus() == BookingStatus.PENDING);
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Determine if a booking can be edited by the current user
+     */
+    private Boolean computeCanEdit(Booking booking, boolean isOwner, boolean isAdmin) {
+        if (!isOwner && !isAdmin) {
+            return false;
+        }
+        // Can edit PENDING or REJECTED bookings
+        return booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.REJECTED;
+    }
+
+    /**
+     * Determine if a booking can be cancelled by the current user
+     */
+    private Boolean computeCanCancel(Booking booking, boolean isOwner, boolean isAdmin) {
+        // Can only cancel own or any (admin)
+        if (!isOwner && !isAdmin) {
+            return false;
+        }
+
+        // Can cancel PENDING or APPROVED, but not if already started
+        boolean isPendingOrApproved = booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.APPROVED;
+        if (!isPendingOrApproved) {
+            return false;
+        }
+
+        // APPROVED bookings can't be cancelled after start time
+        if (booking.getStatus() == BookingStatus.APPROVED && booking.getStartTime().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+
+        return true;
     }
 }

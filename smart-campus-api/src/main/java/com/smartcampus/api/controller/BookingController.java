@@ -3,6 +3,8 @@ package com.smartcampus.api.controller;
 import com.smartcampus.api.dto.BookingDTO;
 import com.smartcampus.api.dto.CreateBookingRequest;
 import com.smartcampus.api.dto.RejectBookingRequest;
+import com.smartcampus.api.dto.AdminCancelBookingRequest;
+import com.smartcampus.api.dto.ConflictProbeResponse;
 import com.smartcampus.api.model.BookingStatus;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.BookingService;
@@ -17,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -167,7 +170,7 @@ public class BookingController {
     /**
      * Cancel an approved booking
      * POST /api/bookings/{id}/cancel
-     * Users can cancel their own bookings, Admins can cancel any booking
+     * Users cancel their own booking (no reason required)
      */
     @PostMapping("/{id}/cancel")
     @PreAuthorize("isAuthenticated()")
@@ -177,5 +180,37 @@ public class BookingController {
         Long userId = ((User) authentication.getPrincipal()).getId();
         BookingDTO booking = bookingService.cancelBooking(id, userId);
         return ResponseEntity.ok(booking);
+    }
+
+    /**
+     * Admin cancel an approved booking
+     * POST /api/bookings/{id}/admin-cancel
+     * Admin cancels any approved booking with mandatory reason
+     */
+    @PostMapping("/{id}/admin-cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BookingDTO> adminCancelBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody AdminCancelBookingRequest request,
+            Authentication authentication) {
+        Long adminId = ((User) authentication.getPrincipal()).getId();
+        BookingDTO booking = bookingService.adminCancelBooking(id, adminId, request.getReason());
+        return ResponseEntity.ok(booking);
+    }
+
+    /**
+     * Probe for conflicts at a given time and resource
+     * GET /api/bookings/conflicts?resourceId=X&startTime=T1&endTime=T2&excludeBookingId=Y
+     * Returns {hasConflict: boolean, count: number}
+     */
+    @GetMapping("/conflicts")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ConflictProbeResponse> checkConflicts(
+            @RequestParam Long resourceId,
+            @RequestParam LocalDateTime startTime,
+            @RequestParam LocalDateTime endTime,
+            @RequestParam(required = false) Long excludeBookingId) {
+        ConflictProbeResponse response = bookingService.getConflicts(resourceId, startTime, endTime, excludeBookingId);
+        return ResponseEntity.ok(response);
     }
 }

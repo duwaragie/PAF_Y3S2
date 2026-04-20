@@ -7,9 +7,10 @@ const statusStyle: Record<BookingStatus, string> = {
   APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
   REJECTED: 'bg-red-50 text-red-700 border border-red-100',
   CANCELLED: 'bg-gray-100 text-gray-600 border border-gray-200',
+  COMPLETED: 'bg-blue-50 text-blue-700 border border-blue-100',
 };
 
-const STATUS_FILTERS: (BookingStatus | 'ALL')[] = ['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
+const STATUS_FILTERS: (BookingStatus | 'ALL')[] = ['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED'];
 
 interface MyBookingsListProps {
   onEdit?: (booking: BookingDTO) => void;
@@ -194,9 +195,9 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
                 </div>
               )}
 
-              {(booking.status === 'PENDING' || (booking.status === 'APPROVED' && new Date(booking.startTime) > new Date())) && (
+              {(booking.canEdit || booking.canCancel) && (
                 <div className="mt-4 flex justify-end gap-2 flex-wrap">
-                  {booking.status === 'PENDING' && onEdit && (
+                  {booking.canEdit && onEdit && (
                     <button
                       onClick={() => onEdit(booking)}
                       className="h-9 px-4 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors"
@@ -204,12 +205,14 @@ export function MyBookingsList({ onEdit }: MyBookingsListProps = {}) {
                       Edit
                     </button>
                   )}
-                  <button
-                    onClick={() => setCancelConfirm(booking)}
-                    className="h-9 px-4 border border-red-200 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    {booking.status === 'PENDING' ? 'Withdraw' : 'Cancel Booking'}
-                  </button>
+                  {booking.canCancel && (
+                    <button
+                      onClick={() => setCancelConfirm(booking)}
+                      className="h-9 px-4 border border-red-200 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      {booking.status === 'PENDING' ? 'Withdraw' : 'Cancel Booking'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

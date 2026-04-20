@@ -1,6 +1,6 @@
 import { api } from '@/lib/axios';
 
-export type BookingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type BookingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
 
 export interface BookingDTO {
   id: number;
@@ -16,12 +16,19 @@ export interface BookingDTO {
   expectedAttendees?: number;
   status: BookingStatus;
   rejectionReason?: string;
+  adminCancelReason?: string;
   approvedById?: number;
   approvedByName?: string;
+  cancelledById?: number;
+  cancelledByName?: string;
   requestedAt: string;
   updatedAt: string;
   approvedAt?: string;
   cancelledAt?: string;
+  completedAt?: string;
+  canEdit?: boolean;
+  canCancel?: boolean;
+  canReview?: boolean;
 }
 
 export interface CreateBookingRequest {
@@ -35,6 +42,15 @@ export interface CreateBookingRequest {
 export interface RejectBookingRequest {
   bookingId: number;
   rejectionReason: string;
+}
+
+export interface AdminCancelBookingRequest {
+  reason: string;
+}
+
+export interface ConflictProbeResponse {
+  hasConflict: boolean;
+  count: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -99,4 +115,19 @@ export const bookingService = {
 
   cancel: (id: number) =>
     api.post<BookingDTO>(`/bookings/${id}/cancel`),
+
+  adminCancel: (id: number, reason: string) =>
+    api.post<BookingDTO>(`/bookings/${id}/admin-cancel`, {
+      reason,
+    }),
+
+  checkConflicts: (resourceId: number, startTime: string, endTime: string, excludeBookingId?: number) =>
+    api.get<ConflictProbeResponse>('/bookings/conflicts', {
+      params: {
+        resourceId,
+        startTime,
+        endTime,
+        ...(excludeBookingId && { excludeBookingId }),
+      },
+    }),
 };

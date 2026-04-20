@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react';
 import type { BookingDTO, BookingStatus } from '@/services/bookingService';
 import { bookingService } from '@/services/bookingService';
 
-type ConfirmAction = { type: 'approve'; booking: BookingDTO } | { type: 'reject'; booking: BookingDTO; reason: string };
+type ConfirmAction = { type: 'approve'; booking: BookingDTO } | { type: 'reject'; booking: BookingDTO; reason: string } | { type: 'admin-cancel'; booking: BookingDTO; reason: string };
 
 const statusStyle: Record<BookingStatus, string> = {
   PENDING: 'bg-amber-50 text-amber-700 border border-amber-100',
   APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
   REJECTED: 'bg-red-50 text-red-700 border border-red-100',
   CANCELLED: 'bg-gray-100 text-gray-600 border border-gray-200',
+  COMPLETED: 'bg-blue-50 text-blue-700 border border-blue-100',
 };
 
-const STATUS_FILTERS: (BookingStatus | 'ALL')[] = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'ALL'];
+const STATUS_FILTERS: (BookingStatus | 'ALL')[] = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED', 'ALL'];
 
 export function AdminBookingManagement() {
   const [bookings, setBookings] = useState<BookingDTO[]>([]);
@@ -20,7 +21,9 @@ export function AdminBookingManagement() {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus | 'ALL'>('PENDING');
   const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>({});
+  const [adminCancelReasons, setAdminCancelReasons] = useState<Record<number, string>>({});
   const [expandedBooking, setExpandedBooking] = useState<number | null>(null);
+  const [expandedCancelBooking, setExpandedCancelBooking] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [acting, setActing] = useState(false);
 
@@ -63,6 +66,18 @@ export function AdminBookingManagement() {
     setConfirm({ type: 'reject', booking, reason });
   };
 
+  const askAdminCancel = (booking: BookingDTO) => {
+    const reason = adminCancelReasons[booking.id]?.trim();
+    if (!reason || reason.length < 5) {
+      setError('Please provide a cancellation reason (at least 5 characters).');
+      setSuccess(null);
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    setConfirm({ type: 'admin-cancel', booking, reason });
+  };
+
   const doAction = async () => {
     if (!confirm) return;
     try {
@@ -71,7 +86,7 @@ export function AdminBookingManagement() {
       if (confirm.type === 'approve') {
         await bookingService.approve(confirm.booking.id);
         setSuccess(`Approved booking for "${confirm.booking.resourceName}". Any overlapping pending requests were auto-rejected.`);
-      } else {
+      } else if (confirm.type === 'reject') {
         await bookingService.reject(confirm.booking.id, confirm.reason);
         setSuccess(`Rejected booking for "${confirm.booking.resourceName}".`);
         setRejectionReasons((prev) => {
@@ -80,6 +95,15 @@ export function AdminBookingManagement() {
           return next;
         });
         setExpandedBooking(null);
+      } else if (confirm.type === 'admin-cancel') {
+        await bookingService.adminCancel(confirm.booking.id, confirm.reason);
+        setSuccess(`Cancelled approved booking for "${confirm.booking.resourceName}".`);
+        setAdminCancelReasons((prev) => {
+          const next = { ...prev };
+          delete next[confirm.booking.id];
+          return next;
+        });
+        setExpandedCancelBooking(null);
       }
       setConfirm(null);
       loadBookings();
@@ -97,6 +121,7 @@ export function AdminBookingManagement() {
     APPROVED: 'Approved Bookings',
     REJECTED: 'Rejected Bookings',
     CANCELLED: 'Cancelled Bookings',
+    COMPLETED: 'Completed Bookings',
     ALL: 'All Bookings',
   };
 
@@ -158,12 +183,14 @@ export function AdminBookingManagement() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-campus-900">
-                  {confirm.type === 'approve' ? 'Approve Booking' : 'Reject Booking'}
+                  {confirm.type === 'approve' ? 'Approve Booking' : confirm.type === 'reject' ? 'Reject Booking' : 'Cancel Booking'}
                 </h3>
                 <p className="text-sm text-gray-500">
                   {confirm.type === 'approve'
                     ? 'The slot will be locked after approval.'
-                    : 'The requester will be notified with your reason.'}
+                    : confirm.type === 'reject'
+                    ? 'The requester will be notified with your reason.'
+                    : 'The requester will be notified of the cancellation.'}
                 </p>
               </div>
             </div>
@@ -174,9 +201,14 @@ export function AdminBookingManagement() {
                   <strong>{confirm.booking.resourceName}</strong>? Other pending requests overlapping this slot will be
                   auto-rejected.
                 </>
-              ) : (
+              ) : confirm.type === 'reject' ? (
                 <>
                   Reject <strong>{confirm.booking.userName}</strong>'s request for{' '}
+                  <strong>{confirm.booking.resourceName}</strong> with the reason above?
+                </>
+              ) : (
+                <>
+                  Cancel <strong>{confirm.booking.userName}</strong>'s approved booking for{' '}
                   <strong>{confirm.booking.resourceName}</strong> with the reason above?
                 </>
               )}
@@ -189,7 +221,7 @@ export function AdminBookingManagement() {
                   confirm.type === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
                 }`}
               >
-                {acting ? 'Working...' : confirm.type === 'approve' ? 'Yes, Approve' : 'Yes, Reject'}
+                {acting ? 'Working...' : confirm.type === 'approve' ? 'Yes, Approve' : confirm.type === 'reject' ? 'Yes, Reject' : 'Yes, Cancel'}
               </button>
               <button
                 onClick={() => setConfirm(null)}
@@ -325,6 +357,48 @@ export function AdminBookingManagement() {
                         className="w-full h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
                       >
                         Confirm Rejection
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {booking.status === 'APPROVED' && (
+                <>
+                  <div className="pt-4 border-t border-gray-100">
+                    <button
+                      onClick={() =>
+                        setExpandedCancelBooking(expandedCancelBooking === booking.id ? null : booking.id)
+                      }
+                      className="w-full h-10 border border-red-200 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      {expandedCancelBooking === booking.id ? 'Hide' : 'Cancel'}
+                    </button>
+                  </div>
+
+                  {expandedCancelBooking === booking.id && (
+                    <div className="mt-4 p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block" htmlFor={`cancel-reason-${booking.id}`}>
+                          Cancellation Reason <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          id={`cancel-reason-${booking.id}`}
+                          placeholder="Explain why this approved booking is being cancelled"
+                          value={adminCancelReasons[booking.id] || ''}
+                          onChange={(e) =>
+                            setAdminCancelReasons((prev) => ({ ...prev, [booking.id]: e.target.value }))
+                          }
+                          minLength={5}
+                          maxLength={500}
+                          className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-campus-200"
+                        />
+                      </div>
+                      <button
+                        onClick={() => askAdminCancel(booking)}
+                        className="w-full h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                      >
+                        Confirm Cancellation
                       </button>
                     </div>
                   )}

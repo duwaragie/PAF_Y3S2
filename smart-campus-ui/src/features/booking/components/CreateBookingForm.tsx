@@ -39,6 +39,7 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
   const [resources, setResources] = useState<ResourceDTO[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null);
 
   const isEditMode = !!editingBooking;
 
@@ -71,6 +72,9 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
   });
 
   const selectedResourceId = watch('resourceId');
+  const startTime = watch('startTime');
+  const endTime = watch('endTime');
+
   const selectedResource = useMemo(
     () => resources.find((r) => r.id === Number(selectedResourceId)),
     [resources, selectedResourceId],
@@ -85,6 +89,46 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
       setValue('resourceId', target);
     }
   }, [resources, editingBooking, resourceId, setValue]);
+
+  // Probe for conflicts reactively as user changes time/resource
+  useEffect(() => {
+    if (!selectedResourceId || !startTime || !endTime) {
+      setConflictWarning(null);
+      return;
+    }
+
+    // Debounce conflict checks
+    const timer = setTimeout(() => {
+      (async () => {
+        try {
+          // Convert datetime-local to ISO string: "2024-01-20T14:30" → "2024-01-20T14:30:00"
+          const start = new Date(`${startTime}:00`).toISOString();
+          const end = new Date(`${endTime}:00`).toISOString();
+          const excludeId = isEditMode ? editingBooking?.id : undefined;
+          
+          const response = await bookingService.checkConflicts(
+            Number(selectedResourceId),
+            start,
+            end,
+            excludeId
+          );
+
+          if (response.data.hasConflict) {
+            setConflictWarning(
+              `⚠️ Conflict detected: ${response.data.count} booking(s) in this time slot. You can still submit, but it will be pending admin review.`
+            );
+          } else {
+            setConflictWarning(null);
+          }
+        } catch (err) {
+          // Silently fail on conflict check errors
+          setConflictWarning(null);
+        }
+      })();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [selectedResourceId, startTime, endTime, isEditMode, editingBooking?.id]);
 
   const onSubmit = async (data: BookingFormData) => {
     setLoading(true);
@@ -128,6 +172,15 @@ export function CreateBookingForm({ resourceId, resourceName, editingBooking, on
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3" />
           </svg>
           {success}
+        </div>
+      )}
+
+      {conflictWarning && (
+        <div className="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path d="M12 9v2m0 4v2m7.07-10.07a10 10 0 1 1-14.14 0M12 3v2" />
+          </svg>
+          {conflictWarning}
         </div>
       )}
 
