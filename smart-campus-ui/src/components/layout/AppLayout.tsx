@@ -116,6 +116,7 @@ const navEntries: NavEntry[] = [
     items: [
       { type: 'link', label: 'Incidents', href: '/admin/incidents', icon: ICONS.alert },
       { type: 'link', label: 'Notifications', href: '/admin/notifications', icon: ICONS.bell },
+      { type: 'link', label: 'Audit Log', href: '/admin/audit', icon: ICONS.clipboard },
     ],
   },
 

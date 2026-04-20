@@ -19,6 +19,7 @@ import AssetsAdminPage from './features/admin/pages/AssetsAdminPage';
 import AmenitiesAdminPage from './features/admin/pages/AmenitiesAdminPage';
 import IncidentsPage from './features/admin/pages/IncidentsPage';
 import NotificationsPage from './features/admin/pages/NotificationsPage';
+import AuditPage from './features/admin/pages/AuditPage';
 import LandingPage from './features/landing/pages/LandingPage';
 import AboutPage from './features/landing/pages/AboutPage';
 import ContactPage from './features/landing/pages/ContactPage';
@@ -135,6 +136,7 @@ function App() {
       <Route path="/technician/dashboard" element={<RoleRoute roles={['TECHNICAL_STAFF']}><TechnicianDashboardPage /></RoleRoute>} />
       <Route path="/admin/incidents" element={<RoleRoute roles={['ADMIN']}><IncidentsPage /></RoleRoute>} />
       <Route path="/admin/notifications" element={<RoleRoute roles={['ADMIN']}><NotificationsPage /></RoleRoute>} />
+      <Route path="/admin/audit" element={<RoleRoute roles={['ADMIN']}><AuditPage /></RoleRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
