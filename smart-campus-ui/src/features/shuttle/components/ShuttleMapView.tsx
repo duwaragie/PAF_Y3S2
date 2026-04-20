@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { APIProvider, Map, useMap, AdvancedMarker, Pin, InfoWindow, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { type ShuttleRouteDTO } from '@/services/shuttleService';
 
@@ -35,17 +35,19 @@ function PolylineRenderer({
   const geometryLib = useMapsLibrary('geometry');
   const routesLib = useMapsLibrary('routes');
   const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const [directionsPath, setDirectionsPath] = useState<google.maps.LatLngLiteral[] | null>(null);
+  const [fetchedPath, setFetchedPath] = useState<google.maps.LatLngLiteral[] | null>(null);
+
+  // Synchronously derive any cached path for this route — no setState needed.
+  const cachedPath = useMemo(
+    () => directionsCache[cacheKey(route)] ?? null,
+    [route]
+  );
+  const directionsPath = cachedPath ?? fetchedPath;
 
   // Fetch road-following path from Directions API if we don't have a usable stored polyline.
   useEffect(() => {
     if (!routesLib || !geometryLib) return;
-
-    const key = cacheKey(route);
-    if (directionsCache[key]) {
-      setDirectionsPath(directionsCache[key]);
-      return;
-    }
+    if (cachedPath) return;
 
     // Skip fetch if DB polyline already looks valid (decoded first point near origin).
     if (route.polyline && route.polyline.trim() !== '') {
@@ -66,6 +68,7 @@ function PolylineRenderer({
       }
     }
 
+    const key = cacheKey(route);
     const service = new routesLib.DirectionsService();
     service.route(
       {
@@ -77,13 +80,13 @@ function PolylineRenderer({
         if (status === google.maps.DirectionsStatus.OK && result?.routes[0]?.overview_path) {
           const path = result.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
           directionsCache[key] = path;
-          setDirectionsPath(path);
+          setFetchedPath(path);
         } else {
           console.warn(`Directions API failed for route "${route.name}" (${status}); falling back to straight line.`);
         }
       }
     );
-  }, [routesLib, geometryLib, route]);
+  }, [routesLib, geometryLib, route, cachedPath]);
 
   useEffect(() => {
     if (!map || !window.google || !geometryLib) return;

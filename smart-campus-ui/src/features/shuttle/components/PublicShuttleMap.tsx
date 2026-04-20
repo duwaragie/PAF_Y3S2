@@ -27,7 +27,7 @@ export function PublicShuttleMap() {
         setError(null);
         const res = await shuttleService.getActiveRoutes();
         setActiveRoutes(res.data);
-      } catch (err) {
+      } catch {
         setError('Failed to load shuttle routes.');
       } finally {
         setLoading(false);

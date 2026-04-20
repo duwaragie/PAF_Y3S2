@@ -35,6 +35,7 @@ export default function LecturerCoursesPage() {
 
   useEffect(() => {
     void loadSections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSections = async () => {

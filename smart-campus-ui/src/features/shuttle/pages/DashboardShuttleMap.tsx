@@ -14,7 +14,7 @@ export default function DashboardShuttleMap() {
         setError(null);
         const res = await shuttleService.getActiveRoutes();
         setActiveRoutes(res.data);
-      } catch (err) {
+      } catch {
         setError('Failed to load shuttle routes.');
       } finally {
         setLoading(false);

@@ -36,6 +36,7 @@ export default function TechnicianDashboardPage() {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, []);
 
   async function load() {

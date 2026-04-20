@@ -109,7 +109,7 @@ export default function AdminShuttleRoutesPage() {
         setError(null);
         const res = await shuttleService.getAllRoutes();
         setRoutes(res.data);
-      } catch (err) {
+      } catch {
         setError('Failed to load shuttle routes.');
       } finally {
         setLoading(false);
