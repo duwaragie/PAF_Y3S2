@@ -158,14 +158,27 @@ public class CreateBookingTool implements AiTool {
             preview.put("hasApprovedConflict", hasConflict);
             preview.put("overCapacity", overCapacity);
 
+            // Spell out EXACTLY the next tool call the LLM should make on user yes.
+            // Some models loop the preview when `confirmed` is optional \u2014 giving them a
+            // fully-formed commit args object eliminates that ambiguity.
+            Map<String, Object> commitArgs = new LinkedHashMap<>();
+            commitArgs.put("resourceId", resourceId);
+            commitArgs.put("startTime", startDt.toString());
+            commitArgs.put("endTime", endDt.toString());
+            commitArgs.put("purpose", purpose);
+            if (expectedAttendees != null) commitArgs.put("expectedAttendees", expectedAttendees);
+            commitArgs.put("confirmed", true);
+
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("confirmationRequired", true);
             result.put("preview", preview);
+            result.put("commitArgs", commitArgs);
             result.put("instructions",
-                    "Show this preview to the user in clear natural language. Ask them to confirm "
-                            + "with a clear yes. If any warning flags are true (hasApprovedConflict, "
-                            + "overCapacity), highlight them. Only on explicit user confirmation, call "
-                            + "create_booking again with the SAME arguments PLUS confirmed=true.");
+                    "Show the preview to the user and ask 'Shall I go ahead?'. On explicit user yes, "
+                            + "your NEXT action MUST be a tool_call to create_booking with EXACTLY the "
+                            + "commitArgs shown above (note confirmed=true). Do NOT produce prose "
+                            + "repeating the preview, and do NOT call create_booking again with "
+                            + "confirmed=false.");
             return result;
         }
 

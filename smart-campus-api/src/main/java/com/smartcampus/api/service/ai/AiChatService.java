@@ -14,7 +14,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,24 +27,29 @@ import java.util.Set;
 public class AiChatService {
 
     private final RestClient groqClient;
+    private final RestClient openaiClient;
     private final AiProperties props;
     private final ToolRegistry toolRegistry;
     private final ObjectMapper mapper;
 
     public AiChatService(
             @Qualifier("groqRestClient") RestClient groqClient,
+            @Qualifier("openaiRestClient") RestClient openaiClient,
             AiProperties props,
             ToolRegistry toolRegistry,
             ObjectMapper mapper) {
         this.groqClient = groqClient;
+        this.openaiClient = openaiClient;
         this.props = props;
         this.toolRegistry = toolRegistry;
         this.mapper = mapper;
     }
 
     public ChatResponseDto chat(List<ChatMessageDto> history, User currentUser) {
-        if (props.apiKey() == null || props.apiKey().isBlank()) {
-            throw new IllegalStateException("GROQ_API_KEY is not configured");
+        String apiKey = props.activeApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException(
+                    (props.isOpenAi() ? "OPENAI_API_KEY" : "GROQ_API_KEY") + " is not configured");
         }
 
         ArrayNode messages = mapper.createArrayNode();
@@ -56,6 +63,7 @@ public class AiChatService {
 
         Set<String> toolsUsed = new LinkedHashSet<>();
         int maxIterations = props.maxToolIterations() == null ? 4 : props.maxToolIterations();
+        boolean retriedToolUse = false;
 
         for (int iteration = 0; iteration < maxIterations; iteration++) {
             JsonNode completion;
@@ -67,6 +75,26 @@ public class AiChatService {
                         : rle.getRetryAfterSeconds() + " second(s)";
                 return new ChatResponseDto(
                         "I'm a bit overloaded right now \u2014 please try again in " + wait + ".",
+                        new ArrayList<>(toolsUsed));
+            } catch (ToolUseFailedException tufe) {
+                // Llama 3.3 occasionally emits text-mode <function=...> calls with stringified
+                // args. One corrective nudge clears this up the vast majority of the time.
+                if (!retriedToolUse) {
+                    retriedToolUse = true;
+                    log.info("Retrying after tool_use_failed");
+                    ObjectNode nudge = mapper.createObjectNode();
+                    nudge.put("role", "system");
+                    nudge.put("content",
+                            "Your previous tool call used the wrong argument types. "
+                            + "Use native function calling with EXACT types from the schema \u2014 "
+                            + "integers as numbers (not strings), booleans as true/false (not \"true\"). "
+                            + "Never output <function=...> text.");
+                    messages.add(nudge);
+                    continue;
+                }
+                log.warn("tool_use_failed after retry: {}", tufe.getMessage());
+                return new ChatResponseDto(
+                        "I had trouble calling the right tool for that. Could you rephrase?",
                         new ArrayList<>(toolsUsed));
             } catch (RuntimeException e) {
                 log.warn("AI chat failed: {}", e.getMessage());
@@ -111,59 +139,33 @@ public class AiChatService {
 
     private ObjectNode systemMessage(User currentUser) {
         String prompt = """
-                You are CampusBot, the friendly AI assistant for the Smart Campus Hub \
-                at SLIIT. Students get full self-service; lecturers, admins, and staff \
-                get read-only answers (they use the admin UI for changes).
-
-                Capabilities available to everyone:
-                  \u2022 facilities: browse, count, search, find free slots
-                  \u2022 shuttle routes: browse active routes, origins and destinations
-                  \u2022 bookings, tickets, notifications: view own records
-                  \u2022 courses: browse catalogue, list sections, view enrollments, teaching load (lecturer)
-
-                Student-only (write) capabilities:
-                  \u2022 bookings: create, reschedule, cancel
-                  \u2022 tickets: report, add/edit/delete own comments
-                  \u2022 notifications: mark read, mark all read, delete
-                  \u2022 enrollments: enroll, withdraw
-                  \u2022 transcript: view GPA + credits
-
-                The current user is: %s (role: %s, id: %s).
-                Today is %s.
+                You are CampusBot for SLIIT Smart Campus Hub. \
+                User: %s (role: %s, id: %s). Current date-time: %s (%s).
 
                 Rules:
-                - Always use the provided tools to read live data \u2014 never invent ticket numbers, \
-                booking IDs, or notification content.
-                - When a tool returns a list, format the reply as a short intro sentence followed \
-                by a clean bullet list. Do not dump raw JSON.
-                - Be concise and warm. Use the user's first name occasionally.
-                - End list-style answers with a brief, relevant follow-up suggestion \
-                (e.g. "Want details on any of these?").
-                - If the user asks something outside your tools (e.g. "what's the weather"), \
-                politely say you focus on campus services.
-                - Grades: if a tool returns grade=null with gradeNote="Not yet released", \
-                tell the user the grade hasn't been released yet \u2014 never guess or invent a grade.
-                - Write operations are ALL two-step. When any tool returns \
-                confirmationRequired=true: present the preview clearly in natural language \
-                (never dump JSON), highlight any warnings (overCapacity, hasApprovedConflict, \
-                destructive actions like deletes/withdrawals), and explicitly ask "Shall I go \
-                ahead?". Only after an explicit user yes, call the SAME tool again with the SAME \
-                arguments plus confirmed=true. Never confirm on the user's behalf.
-                - Destructive actions (delete_*, withdraw_enrollment, mark_all_notifications_read, \
-                cancel_booking) deserve an extra sentence of warning about consequences.
-                - Lookups before writes: if the user gives a name (e.g. "Lab 304", "CS2030") rather \
-                than an ID, first call a browse tool (browse_facilities, browse_course_offerings, \
-                list_course_sections) to resolve the ID, then pass it to the write tool.
-                - Tool responses with error="forbidden" mean the current user's role can't perform \
-                that action. Explain politely which role IS allowed (message field has the detail).
-                - Tools return role="STUDENT"/"LECTURER" or analogous hints \u2014 use them to frame \
-                your reply for the user you're talking to.
+                - Always call tools for live data; never invent IDs, grades, or content.
+                - Never decide a time is "in the past" yourself \u2014 always let the tool's response \
+                tell you. Use the current date-time above for any reasoning, and TRUST the tool's verdict.
+                - Format lists as a brief intro + bullets. No raw JSON.
+                - Be warm and concise; use the user's first name occasionally.
+                - If a user mentions a name ("Lab 304", "CS2030"), call a browse tool first to get its ID.
+                - When you've already got IDs from an earlier browse/find/list call in this \
+                conversation, reuse them for the next write tool call. Do NOT re-browse or ask \
+                the user to re-specify what they just saw.
+                - If a tool returns confirmationRequired=true: show the preview clearly, \
+                warn about any flags (overCapacity, hasApprovedConflict, destructive action), \
+                ask "Shall I go ahead?". On user yes, if the result included a `commitArgs` \
+                object, your NEXT action must be a tool_call to the same tool using EXACTLY \
+                those args (confirmed=true). Do not produce prose that re-describes the preview.
+                - If a tool returns error=forbidden, explain politely which role is allowed.
+                - If asked something outside your tools, say you focus on campus services.
                 """
                 .formatted(
                         currentUser.getName(),
                         currentUser.getRole(),
                         currentUser.getId(),
-                        LocalDate.now());
+                        ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
+                        ZoneId.systemDefault());
         ObjectNode msg = mapper.createObjectNode();
         msg.put("role", "system");
         msg.put("content", prompt);
@@ -171,24 +173,27 @@ public class AiChatService {
     }
 
     private JsonNode callGroq(ArrayNode messages, User currentUser) {
+        RestClient client = props.isOpenAi() ? openaiClient : groqClient;
+        String providerName = props.activeProviderName();
+
         ObjectNode body = mapper.createObjectNode();
-        body.put("model", props.model());
+        body.put("model", props.activeModel());
         body.set("messages", messages);
         body.set("tools", buildToolsArray(currentUser));
         body.put("tool_choice", "auto");
         body.put("temperature", 0.3);
-        // Cap the output reservation so Groq's TPM quota isn't burned on unused headroom.
-        body.put("max_tokens", 1024);
+        // Cap output reservation so Groq's TPM quota / OpenAI's per-request spend isn't burned on unused headroom.
+        body.put("max_tokens", 512);
 
         try {
-            String raw = groqClient.post()
+            String raw = client.post()
                     .uri("/chat/completions")
-                    .header("Authorization", "Bearer " + props.apiKey())
+                    .header("Authorization", "Bearer " + props.activeApiKey())
                     .body(mapper.writeValueAsString(body))
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
                         String errBody = new String(res.getBody().readAllBytes());
-                        log.error("Groq error {}: {}", res.getStatusCode(), errBody);
+                        log.error("{} error {}: {}", providerName, res.getStatusCode(), errBody);
                         if (res.getStatusCode().value() == 429) {
                             Integer retryAfter = null;
                             String hdr = res.getHeaders().getFirst("retry-after");
@@ -198,8 +203,11 @@ public class AiChatService {
                             }
                             throw new RateLimitException(retryAfter, errBody);
                         }
+                        if (res.getStatusCode().value() == 400 && errBody.contains("tool_use_failed")) {
+                            throw new ToolUseFailedException(errBody);
+                        }
                         throw new IllegalStateException(
-                                "Groq API error " + res.getStatusCode() + ": " + errBody);
+                                providerName + " API error " + res.getStatusCode() + ": " + errBody);
                     })
                     .body(String.class);
             return mapper.readTree(raw);
@@ -219,10 +227,57 @@ public class AiChatService {
             ObjectNode fn = entry.putObject("function");
             fn.put("name", tool.name());
             fn.put("description", tool.description());
-            fn.set("parameters", tool.parametersSchema());
+            ObjectNode schema = tool.parametersSchema().deepCopy();
+            widenSchemaTypes(schema);
+            ensureConfirmedRequired(schema);
+            fn.set("parameters", schema);
             arr.add(entry);
         }
         return arr;
+    }
+
+    /**
+     * Widens integer/number/boolean types to also accept string form. Some Groq models
+     * (e.g. llama-4-scout) occasionally emit stringified args; accepting both lets Groq's
+     * server-side schema validation pass, and our tools already coerce via Jackson's
+     * asInt()/asLong()/asBoolean() which parse numeric strings.
+     */
+    private void widenSchemaTypes(JsonNode node) {
+        if (node == null || !node.isObject()) return;
+        ObjectNode obj = (ObjectNode) node;
+        JsonNode type = obj.get("type");
+        if (type != null && type.isString()) {
+            String t = type.asString();
+            if ("integer".equals(t) || "number".equals(t) || "boolean".equals(t)) {
+                ArrayNode union = mapper.createArrayNode();
+                union.add(t);
+                union.add("string");
+                obj.set("type", union);
+            }
+        }
+        JsonNode props = obj.get("properties");
+        if (props != null && props.isObject()) {
+            for (var entry : props.properties()) {
+                widenSchemaTypes(entry.getValue());
+            }
+        }
+    }
+
+    /**
+     * If a tool exposes a `confirmed` parameter, force it into the required list so the LLM
+     * must consciously pick true or false on every call. Prevents models from silently
+     * re-calling with confirmed=false (default) after the user has said yes, which loops
+     * the preview endlessly.
+     */
+    private void ensureConfirmedRequired(ObjectNode schema) {
+        JsonNode props = schema.get("properties");
+        if (props == null || !props.isObject() || props.get("confirmed") == null) return;
+        JsonNode req = schema.get("required");
+        ArrayNode required = (req instanceof ArrayNode) ? (ArrayNode) req : schema.putArray("required");
+        for (JsonNode item : required) {
+            if ("confirmed".equals(item.asString(""))) return;
+        }
+        required.add("confirmed");
     }
 
     private String invokeTool(String fnName, String argsJson, User currentUser) {

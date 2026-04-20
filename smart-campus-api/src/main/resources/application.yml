@@ -69,9 +69,14 @@ app:
   upload:
     tickets-dir: ./uploads/tickets
   ai:
+    provider: ${AI_PROVIDER:openai}
+    max-tool-iterations: 4
+    request-timeout-ms: 30000
     groq:
       api-key: ${GROQ_API_KEY:}
       base-url: https://api.groq.com/openai/v1
-      model: ${GROQ_MODEL:llama-3.3-70b-versatile}
-      max-tool-iterations: 4
-      request-timeout-ms: 30000
+      model: ${GROQ_MODEL:meta-llama/llama-4-scout-17b-16e-instruct}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: https://api.openai.com/v1
+      model: ${OPENAI_MODEL:gpt-4o-mini}
