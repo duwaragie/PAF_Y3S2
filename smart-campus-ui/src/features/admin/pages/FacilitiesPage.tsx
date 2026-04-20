@@ -730,7 +730,7 @@ export default function FacilitiesPage() {
                   <table className="w-full text-left">
                     <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/50">
-                      {['Name', 'Type', 'Features', 'Capacity', 'Availability', 'Status'].map((h) => (
+                      {['Image', 'Name', 'Type', 'Features', 'Capacity', 'Availability', 'Status'].map((h) => (
                           <th key={h} className="px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -748,6 +748,13 @@ export default function FacilitiesPage() {
                           onClick={() => handleRowClick(r)}
                           className="border-b border-gray-50 hover:bg-campus-50/50 transition-colors cursor-pointer group"
                         >
+                          <td className="px-5 py-4">
+                            {r.imageUrl ? (
+                              <img src={r.imageUrl} alt={r.name} className="w-10 h-10 object-cover rounded-lg border border-gray-100 shadow-sm" />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-[10px] text-gray-400 font-medium border border-gray-100">N/A</div>
+                            )}
+                          </td>
                           <td className="px-5 py-4 text-sm font-semibold text-campus-800 group-hover:text-campus-900">
                             {r.name}
                           </td>
@@ -796,7 +803,7 @@ export default function FacilitiesPage() {
                     })}
                     {resources.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-5 py-16 text-center">
+                          <td colSpan={7} className="px-5 py-16 text-center">
                             <div className="flex flex-col items-center justify-center">
                               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 border border-gray-100">
                                 <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>
