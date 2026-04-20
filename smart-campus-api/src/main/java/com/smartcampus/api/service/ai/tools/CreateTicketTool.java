@@ -2,6 +2,7 @@ package com.smartcampus.api.service.ai.tools;
 
 import com.smartcampus.api.dto.TicketRequestDTO;
 import com.smartcampus.api.dto.TicketResponseDTO;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.TicketCategory;
 import com.smartcampus.api.model.TicketPriority;
 import com.smartcampus.api.model.User;
@@ -28,6 +29,10 @@ public class CreateTicketTool implements AiTool {
         return "Reports a maintenance / incident ticket. TWO-STEP: first call with confirmed=false to get "
                 + "a preview, then ask the user to confirm, then call with confirmed=true. "
                 + "Use for 'report a broken projector in Lab 304', 'flag an electrical issue'.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

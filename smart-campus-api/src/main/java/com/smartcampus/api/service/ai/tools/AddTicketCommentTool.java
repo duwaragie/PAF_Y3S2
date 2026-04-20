@@ -2,6 +2,7 @@ package com.smartcampus.api.service.ai.tools;
 
 import com.smartcampus.api.dto.TicketCommentRequestDTO;
 import com.smartcampus.api.dto.TicketCommentResponseDTO;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.TicketService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -25,6 +26,10 @@ public class AddTicketCommentTool implements AiTool {
     @Override public String description() {
         return "Adds a comment to a ticket. Students can only comment on their own tickets; "
                 + "admins/technicians can comment on any. Two-step confirmation.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

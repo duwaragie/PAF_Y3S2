@@ -2,6 +2,7 @@ package com.smartcampus.api.service.ai.tools;
 
 import com.smartcampus.api.dto.BookingDTO;
 import com.smartcampus.api.dto.CreateBookingRequest;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.BookingService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -27,6 +28,10 @@ public class UpdateBookingTool implements AiTool {
     @Override public String description() {
         return "Reschedules a PENDING booking (owner or admin). Cannot edit APPROVED bookings \u2014 "
                 + "cancel and rebook instead. Two-step confirmation.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

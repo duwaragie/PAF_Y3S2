@@ -1,5 +1,6 @@
 package com.smartcampus.api.service.ai.tools;
 
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.NotificationService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -22,6 +23,10 @@ public class MarkAllNotificationsReadTool implements AiTool {
     @Override public String description() {
         return "Marks ALL the user's unread notifications as read. Two-step confirmation because "
                 + "it's bulk and can't be undone.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

@@ -1,6 +1,7 @@
 package com.smartcampus.api.service.ai.tools;
 
 import com.smartcampus.api.dto.NotificationDTO;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.NotificationService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -22,6 +23,10 @@ public class MarkNotificationReadTool implements AiTool {
 
     @Override public String description() {
         return "Marks a single notification as read. Non-destructive \u2014 no confirmation needed.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

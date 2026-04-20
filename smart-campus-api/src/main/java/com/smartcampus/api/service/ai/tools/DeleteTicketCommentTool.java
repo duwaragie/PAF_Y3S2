@@ -1,5 +1,6 @@
 package com.smartcampus.api.service.ai.tools;
 
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.TicketService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -22,6 +23,10 @@ public class DeleteTicketCommentTool implements AiTool {
     @Override public String description() {
         return "Deletes a ticket comment. Author can delete their own; admins can delete any. "
                 + "DESTRUCTIVE \u2014 two-step confirmation.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

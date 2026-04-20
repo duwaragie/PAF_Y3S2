@@ -2,6 +2,7 @@ package com.smartcampus.api.service.ai.tools;
 
 import com.smartcampus.api.dto.TicketCommentRequestDTO;
 import com.smartcampus.api.dto.TicketCommentResponseDTO;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.TicketService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -25,6 +26,10 @@ public class EditTicketCommentTool implements AiTool {
     @Override public String description() {
         return "Edits an existing ticket comment. Only the author can edit their own comments. "
                 + "Two-step confirmation.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {

@@ -5,6 +5,7 @@ import com.smartcampus.api.dto.CreateBookingRequest;
 import com.smartcampus.api.dto.ResourceDTO;
 import com.smartcampus.api.exception.BadRequestException;
 import com.smartcampus.api.exception.ResourceNotFoundException;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.repository.BookingRepository;
 import com.smartcampus.api.service.BookingService;
@@ -41,6 +42,10 @@ public class CreateBookingTool implements AiTool {
                 + "(or omitted) to get a preview \u2014 then show the preview to the user, ask for explicit "
                 + "confirmation, and only call again with confirmed=true once the user says yes. "
                 + "The server will refuse to create without confirmed=true.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override

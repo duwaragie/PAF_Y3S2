@@ -1,6 +1,7 @@
 package com.smartcampus.api.service.ai.tools;
 
 import com.smartcampus.api.dto.BookingDTO;
+import com.smartcampus.api.model.Role;
 import com.smartcampus.api.model.User;
 import com.smartcampus.api.service.BookingService;
 import com.smartcampus.api.service.ai.AiTool;
@@ -23,6 +24,10 @@ public class CancelBookingTool implements AiTool {
     @Override public String description() {
         return "Cancels a booking. Owner or admin. PENDING can always be cancelled; APPROVED only "
                 + "before start time. Two-step confirmation.";
+    }
+
+    @Override public boolean isAvailableFor(User user) {
+        return user.getRole() == Role.STUDENT;
     }
 
     @Override public ObjectNode parametersSchema() {
