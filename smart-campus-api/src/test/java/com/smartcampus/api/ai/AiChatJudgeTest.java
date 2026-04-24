@@ -62,9 +62,9 @@ class AiChatJudgeTest {
     @BeforeEach
     void setUp() throws InterruptedException {
         // Groq free tier TPM (30K on scout) is tight for 10 sequential chat calls (~4.5K each).
-        // A short spacer here spreads tokens across a wider rolling window so we stay under.
-        // OpenAI-backed runs ignore this as a harmless cost.
-        Thread.sleep(5_000);
+        // Spacer stretches the run past 90s so tokens decay out of the rolling window in time.
+        // OpenAI-backed runs just eat the delay as harmless cost.
+        Thread.sleep(8_000);
 
         // Fresh student on every case so data state is predictable.
         userRepository.findByEmail("eval-student@test.local").ifPresent(userRepository::delete);
@@ -152,19 +152,20 @@ class AiChatJudgeTest {
     @MethodSource("readCases")
     @DisplayName("Read-only tools: tool call + LLM-judged quality")
     void evaluateReadCase(Case c) throws Exception {
-        // 1. Send the prompt to our chat endpoint
+        // 1. Send the prompt to our chat endpoint (with one retry on rate-limit messages)
         String requestBody = mapper.writeValueAsString(Map.of(
                 "messages", List.of(Map.of("role", "user", "content", c.prompt))));
 
-        MvcResult result = mockMvc.perform(post("/api/ai/chat")
-                        .header("Authorization", "Bearer " + jwt)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        JsonNode resp = mapper.readTree(result.getResponse().getContentAsString());
+        JsonNode resp = postChat(requestBody);
         String reply = resp.path("reply").asText("");
+
+        if (reply.contains("overloaded") || reply.toLowerCase().contains("try again in")) {
+            // Groq TPM bucket hit during this iteration — wait for the window to clear, retry once.
+            Thread.sleep(15_000);
+            resp = postChat(requestBody);
+            reply = resp.path("reply").asText("");
+        }
+
         List<String> toolsUsed = new ArrayList<>();
         resp.path("toolsUsed").forEach(n -> toolsUsed.add(n.asText()));
 
@@ -178,5 +179,15 @@ class AiChatJudgeTest {
         assertTrue(verdict.pass(),
                 "[" + c.name + "] judge failed: " + verdict.reasoning()
                         + "\nReply was: " + reply);
+    }
+
+    private JsonNode postChat(String requestBody) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/ai/chat")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andReturn();
+        return mapper.readTree(result.getResponse().getContentAsString());
     }
 }
