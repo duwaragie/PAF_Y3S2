@@ -160,6 +160,42 @@ public class SampleDataInitializer implements ApplicationRunner {
                 .build();
         toSave.add(r5);
 
+        Resource r6 = Resource.builder()
+                .name("Lecture Hall L201")
+                .type(ResourceType.LECTURE_HALL)
+                .capacity(80)
+                .location(findLocation.apply("0201"))
+                .status(ResourceStatus.ACTIVE)
+                .assets(assetsOf(assets, "Projector", "Whiteboard"))
+                .amenities(amenitiesOf(amenities, "AC", "WiFi", "Natural Light"))
+                .build();
+        r6.setAvailabilities(weeklyWindow(r6, DayOfWeek.MONDAY, DayOfWeek.FRIDAY, 8, 17));
+        toSave.add(r6);
+
+        Resource r7 = Resource.builder()
+                .name("Seminar Room S105")
+                .type(ResourceType.MEETING_ROOM)
+                .capacity(16)
+                .location(findLocation.apply("0105"))
+                .status(ResourceStatus.ACTIVE)
+                .assets(assetsOf(assets, "Smart Board", "Whiteboard"))
+                .amenities(amenitiesOf(amenities, "AC", "WiFi", "Power Sockets", "Wheelchair Access"))
+                .build();
+        r7.setAvailabilities(weeklyWindow(r7, DayOfWeek.MONDAY, DayOfWeek.SATURDAY, 8, 19));
+        toSave.add(r7);
+
+        Resource r8 = Resource.builder()
+                .name("Mobile Sound System")
+                .type(ResourceType.EQUIPMENT)
+                .capacity(null)
+                .location(findLocation.apply("0104"))
+                .status(ResourceStatus.ACTIVE)
+                .assets(new HashSet<>())
+                .amenities(new HashSet<>())
+                .availabilities(new ArrayList<>())
+                .build();
+        toSave.add(r8);
+
         resourceRepository.saveAll(toSave).forEach(r -> out.put(r.getName(), r));
         log.info("Seeded {} resources.", out.size());
         return out;
@@ -250,8 +286,55 @@ public class SampleDataInitializer implements ApplicationRunner {
                 .status(BookingStatus.PENDING)
                 .build());
 
+        // 6. COMPLETED — lecturer's past L201 lecture (last week, morning slot)
+        Resource l201 = resources.get("Lecture Hall L201");
+        if (l201 != null) {
+            bookings.add(Booking.builder()
+                    .user(lecturer.get())
+                    .resource(l201)
+                    .startTime(now.minusDays(7).withHour(9).withMinute(0).withSecond(0).withNano(0))
+                    .endTime(now.minusDays(7).withHour(11).withMinute(0).withSecond(0).withNano(0))
+                    .purpose("IT3030 lecture — module overview")
+                    .expectedAttendees(70)
+                    .status(BookingStatus.COMPLETED)
+                    .approvedBy(admin.get())
+                    .approvedAt(now.minusDays(10))
+                    .completedAt(now.minusDays(7).withHour(11))
+                    .build());
+        }
+
+        // 7. APPROVED — student booked Seminar Room S105 for tomorrow morning
+        Resource s105 = resources.get("Seminar Room S105");
+        if (s105 != null) {
+            bookings.add(Booking.builder()
+                    .user(student.get())
+                    .resource(s105)
+                    .startTime(now.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0))
+                    .endTime(now.plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0))
+                    .purpose("Research group meeting — final year project")
+                    .expectedAttendees(5)
+                    .status(BookingStatus.APPROVED)
+                    .approvedBy(admin.get())
+                    .approvedAt(now.minusHours(2))
+                    .build());
+        }
+
+        // 8. COMPLETED — student's past L101 workshop (yesterday afternoon)
+        bookings.add(Booking.builder()
+                .user(student.get())
+                .resource(resources.get("Lecture Hall L101"))
+                .startTime(now.minusDays(1).withHour(14).withMinute(0).withSecond(0).withNano(0))
+                .endTime(now.minusDays(1).withHour(16).withMinute(0).withSecond(0).withNano(0))
+                .purpose("Student club orientation workshop")
+                .expectedAttendees(45)
+                .status(BookingStatus.COMPLETED)
+                .approvedBy(admin.get())
+                .approvedAt(now.minusDays(4))
+                .completedAt(now.minusDays(1).withHour(16))
+                .build());
+
         bookingRepository.saveAll(bookings);
-        log.info("Seeded {} bookings (PENDING × 2, APPROVED × 1, REJECTED × 1, CANCELLED × 1).", bookings.size());
+        log.info("Seeded {} bookings covering PENDING/APPROVED/REJECTED/CANCELLED/COMPLETED statuses.", bookings.size());
     }
 
     private static Set<Asset> assetsOf(Map<String, Asset> all, String... names) {

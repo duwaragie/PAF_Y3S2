@@ -53,6 +53,18 @@ public class DataInitializer implements ApplicationRunner {
                 Role.STUDENT, "STU-0001", null);
         seedUser("lecturer@test.com", "Test Lecturer", "Lecturer@1234!",
                 Role.LECTURER, null, "EMP-0002");
+
+        // Additional sample users to cover all 4 roles with multiple accounts each.
+        seedUser("amali.student@test.com", "Amali Perera", "Student@1234!",
+                Role.STUDENT, "STU-0002", null);
+        seedUser("kasun.student@test.com", "Kasun Silva", "Student@1234!",
+                Role.STUDENT, "STU-0003", null);
+        seedUser("niranjan.lecturer@test.com", "Dr. Niranjan Fernando", "Lecturer@1234!",
+                Role.LECTURER, null, "EMP-0003");
+        seedUser("ravindu.tech@test.com", "Ravindu Jayasena", "Tech@1234!",
+                Role.TECHNICAL_STAFF, null, "EMP-0004");
+        seedUser("chamari.admin@test.com", "Chamari Wickramasinghe", "Admin@1234!",
+                Role.ADMIN, null, "EMP-0005");
     }
 
     private void seedUser(String email, String name, String rawPassword, Role role,

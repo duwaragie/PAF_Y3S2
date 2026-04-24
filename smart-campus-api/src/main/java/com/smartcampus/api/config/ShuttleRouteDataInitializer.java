@@ -62,11 +62,50 @@ public class ShuttleRouteDataInitializer implements CommandLineRunner {
                     .polyline(polyNegombo)
                     .color("#10b981") // Green
                     .active(true)
+                    .build(),
+
+                ShuttleRoute.builder()
+                    .name("Maharagama - Malabe Shuttle")
+                    .originName("Maharagama")
+                    .destinationName("Malabe Campus")
+                    .originLat(6.8480)
+                    .originLng(79.9265)
+                    .destLat(6.9147)
+                    .destLng(79.9723)
+                    .polyline("")
+                    .color("#f59e0b") // Amber
+                    .active(true)
+                    .build(),
+
+                ShuttleRoute.builder()
+                    .name("Kadawatha - Malabe Express")
+                    .originName("Kadawatha")
+                    .destinationName("Malabe Campus")
+                    .originLat(7.0010)
+                    .originLng(79.9515)
+                    .destLat(6.9147)
+                    .destLng(79.9723)
+                    .polyline("")
+                    .color("#a855f7") // Purple
+                    .active(true)
+                    .build(),
+
+                ShuttleRoute.builder()
+                    .name("Rajagiriya - Malabe Loop")
+                    .originName("Rajagiriya")
+                    .destinationName("Malabe Campus")
+                    .originLat(6.9107)
+                    .originLng(79.8956)
+                    .destLat(6.9147)
+                    .destLng(79.9723)
+                    .polyline("")
+                    .color("#0ea5e9") // Sky
+                    .active(false) // inactive route to cover both active states
                     .build()
             );
 
             shuttleRouteRepository.saveAll(routes);
-            System.out.println("Seeded 3 shuttle routes successfully.");
+            System.out.println("Seeded " + routes.size() + " shuttle routes successfully.");
         }
     }
 }
