@@ -1,0 +1,52 @@
+name: AI Chat — LLM-as-Judge
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  ai-chat-eval:
+    name: AI Chat Read-Only E2E + LLM Judge
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: smart-campus-api
+
+    env:
+      # Chat endpoint + judge both hit OpenAI; same key is reused.
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4o-mini
+      JUDGE_MODEL: gpt-4o-mini
+      AI_PROVIDER: openai
+      # H2 is the test DB; these are just the placeholders required by the shared env-var plumbing.
+      DB_USERNAME: sa
+      DB_PASSWORD: password
+      JWT_SECRET_KEY: dGVzdC1zZWNyZXQta2V5LWZvci1jaS1waXBlbGluZS0yNTYtYml0cw==
+      GOOGLE_CLIENT_ID: test-client-id
+      GOOGLE_CLIENT_SECRET: test-client-secret
+      EMAIL_USERNAME: test@example.com
+      EMAIL_PASSWORD: test-password
+      SPRING_PROFILES_ACTIVE: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'maven'
+
+      - name: Guard — OPENAI_API_KEY present
+        run: |
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::OPENAI_API_KEY secret is not set. Add it in GitHub repo Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      - name: Run AI judge test suite
+        run: mvn -B test -Dtest=AiChatJudgeTest
+        timeout-minutes: 15
