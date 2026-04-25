@@ -1,4 +1,5 @@
 import { CreateBookingForm } from '../components/CreateBookingForm';
+import { ResourceBookingTimeline } from '../components/ResourceBookingTimeline';
 import { MyBookingsList } from '../components/MyBookingsList';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -8,6 +9,7 @@ import type { BookingDTO } from '@/services/bookingService';
 export function BookingPage() {
   const [refreshList, setRefreshList] = useState(0);
   const [editingBooking, setEditingBooking] = useState<BookingDTO | null>(null);
+  const [selectedResourceId, setSelectedResourceId] = useState<number | undefined>(undefined);
   const [searchParams] = useSearchParams();
   const preselectedResourceId = Number(searchParams.get('resourceId')) || undefined;
 
@@ -31,7 +33,9 @@ export function BookingPage() {
             resourceId={preselectedResourceId}
             onSuccess={handleSuccess}
             onCancel={() => setEditingBooking(null)}
+            onResourceChange={setSelectedResourceId}
           />
+          <ResourceBookingTimeline resourceId={selectedResourceId ?? preselectedResourceId} />
           <MyBookingsList
             key={refreshList}
             onEdit={(booking) => {
