@@ -131,6 +131,7 @@ export default function AnalyticsSection({
   const [offeringTab, setOfferingTab] = useState('All');
   const [topResTab, setTopResTab] = useState('All Time');
   const [hoursTab, setHoursTab] = useState('All Time');
+  const [reportNow] = useState(Date.now);
 
   const roleData = useMemo(() => {
     const filtered = roleTab === 'Staff'
@@ -148,9 +149,8 @@ export default function AnalyticsSection({
   }, [users, roleTab]);
 
   const bookingData = useMemo(() => {
-    const now = Date.now();
-    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-    const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const weekAgo = reportNow - 7 * 24 * 60 * 60 * 1000;
+    const monthAgo = reportNow - 30 * 24 * 60 * 60 * 1000;
     const filtered = bookings.filter((b) => {
       if (!b.requestedAt) return bookingTab === 'All Time';
       const t = new Date(b.requestedAt).getTime();
@@ -165,7 +165,7 @@ export default function AnalyticsSection({
     return BOOKING_ORDER
       .filter((s) => counts[s])
       .map((s) => ({ name: s, value: counts[s], fill: BOOKING_COLORS[s] }));
-  }, [bookings, bookingTab]);
+  }, [bookings, bookingTab, reportNow]);
 
   const ticketData = useMemo(() => {
     let filtered = tickets;
@@ -215,9 +215,8 @@ export default function AnalyticsSection({
   );
 
   const topResourcesData = useMemo(() => {
-    const now = Date.now();
-    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-    const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const weekAgo = reportNow - 7 * 24 * 60 * 60 * 1000;
+    const monthAgo = reportNow - 30 * 24 * 60 * 60 * 1000;
     const filtered = usageBookings.filter((b) => {
       if (!b.startTime) return topResTab === 'All Time';
       const t = new Date(b.startTime).getTime();
@@ -234,12 +233,11 @@ export default function AnalyticsSection({
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 7);
-  }, [usageBookings, topResTab]);
+  }, [usageBookings, topResTab, reportNow]);
 
   const peakHoursData = useMemo(() => {
-    const now = Date.now();
-    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
-    const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const weekAgo = reportNow - 7 * 24 * 60 * 60 * 1000;
+    const monthAgo = reportNow - 30 * 24 * 60 * 60 * 1000;
     const filtered = usageBookings.filter((b) => {
       if (!b.startTime) return hoursTab === 'All Time';
       const t = new Date(b.startTime).getTime();
@@ -257,7 +255,7 @@ export default function AnalyticsSection({
       name: `${String(h).padStart(2, '0')}:00`,
       value,
     }));
-  }, [usageBookings, hoursTab]);
+  }, [usageBookings, hoursTab, reportNow]);
 
   const peakHoursHasData = peakHoursData.some((d) => d.value > 0);
 
